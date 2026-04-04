@@ -32,6 +32,7 @@ export default function LoginPage() {
       localStorage.setItem('tenant_id', data.tenant_id)
       localStorage.setItem('company_name', data.company_name)
       localStorage.setItem('role', data.role)
+      localStorage.setItem('country', data.country || 'NZ')
 
       router.push('/dashboard')
 
