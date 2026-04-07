@@ -72,6 +72,91 @@ function getVoiceSteps(title: string): string[] {
 
 function VoiceGuideModal({ finding, onClose }: { finding: any, onClose: () => void }) {
   const [speaking, setSpeaking] = useState(false)
+  const [voicesReady, setVoicesReady] = useState(false)
+  const steps = getVoiceSteps(finding.title)
+
+  const fullScript = `${finding.title}. Here is how to fix this step by step. ${steps.map((s, i) => `Step ${i + 1}. ${s}`).join(" ")}`
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length > 0) setVoicesReady(true)
+    }
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+    return () => { window.speechSynthesis.cancel() }
+  }, [])
+
+  function handlePlay() {
+    if (speaking) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+      return
+    }
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(fullScript)
+    utterance.rate = 0.9
+    utterance.pitch = 1
+    utterance.volume = 1
+    const voices = window.speechSynthesis.getVoices()
+    const english = voices.find(v => v.lang === "en-GB") || voices.find(v => v.lang.startsWith("en")) || voices[0]
+    if (english) utterance.voice = english
+    utterance.onstart = () => setSpeaking(true)
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = (e) => { console.error("Speech error", e); setSpeaking(false) }
+    window.speechSynthesis.speak(utterance)
+  }
+
+  function handleClose() {
+    window.speechSynthesis.cancel()
+    setSpeaking(false)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-white font-semibold text-lg pr-4">{finding.title}</h3>
+          <button onClick={handleClose} className="text-gray-500 hover:text-white text-xl flex-shrink-0">&#x2715;</button>
+        </div>
+
+        <div className="bg-gray-800 rounded-xl p-4 mb-6 text-center">
+          <p className="text-gray-400 text-sm mb-3">Click play to hear how to fix this issue</p>
+          <button
+            onClick={handlePlay}
+            className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-colors ${speaking ? "bg-red-700 hover:bg-red-800" : "bg-red-600 hover:bg-red-700"}`}
+          >
+            {speaking ? (
+              <><span className="w-3 h-3 bg-white rounded-sm inline-block"></span> Stop</>
+            ) : (
+              <><span style={{display:"inline-block",width:0,height:0,borderTop:"8px solid transparent",borderBottom:"8px solid transparent",borderLeft:"14px solid white"}}></span> Play voice guide</>
+            )}
+          </button>
+          {speaking && <p className="text-green-400 text-xs mt-2 animate-pulse">Speaking...</p>}
+          {!voicesReady && <p className="text-gray-600 text-xs mt-2">Loading voices...</p>}
+        </div>
+
+        <div>
+          <h4 className="text-gray-300 font-medium mb-3 text-sm uppercase tracking-wide">Step-by-step instructions</h4>
+          <ol className="space-y-3">
+            {steps.map((step, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="bg-red-900/50 text-red-300 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                <p className="text-gray-300 text-sm leading-relaxed">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-gray-800">
+          <p className="text-gray-500 text-xs">Need more help? Email <a href="mailto:governance@secureit360.co" className="text-gray-400 underline">governance@secureit360.co</a> and a specialist will walk you through this personally.</p>
+        </div>
+      </div>
+    </div>
+  )
+} {
+  const [speaking, setSpeaking] = useState(false)
   const steps = getVoiceSteps(finding.title)
 
   const fullScript = `${finding.title}. Here is how to fix this step by step. ${steps.map((s, i) => `Step ${i + 1}. ${s}`).join(' ')}`
@@ -597,4 +682,5 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
