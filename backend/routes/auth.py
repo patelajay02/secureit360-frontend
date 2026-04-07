@@ -38,6 +38,18 @@ def register(data: RegisterRequest):
                 detail=f"Your email must match your company domain. Expected an email ending in @{company_domain}"
             )
 
+        # Block duplicate domain registration
+        existing_domain = supabase_admin.table("domains")\
+            .select("id")\
+            .eq("domain", company_domain)\
+            .execute()
+
+        if existing_domain.data:
+            raise HTTPException(
+                status_code=400,
+                detail="This domain is already registered. If you believe this is an error, contact governance@secureit360.co"
+            )
+
         auth_response = supabase_admin.auth.admin.create_user({
             "email": data.email,
             "password": data.password,
@@ -67,7 +79,7 @@ def register(data: RegisterRequest):
 
         supabase_admin.table("domains").insert({
             "tenant_id": tenant_id,
-            "domain": data.domain,
+            "domain": company_domain,
             "is_primary": True,
             "verified": False
         }).execute()
@@ -151,6 +163,19 @@ def login(data: LoginRequest):
             .single()\
             .execute()
 
+        tenant = tenant_user.data["tenants"]
+
+        # Check if trial has expired and no active subscription
+        if tenant.get("status") == "trial":
+            trial_ends_at = tenant.get("trial_ends_at")
+            if trial_ends_at:
+                trial_end = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+                if datetime.now(trial_end.tzinfo) > trial_end:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Your free trial has expired. Please subscribe to continue at app.secureit360.co/pricing"
+                    )
+
         return {
             "token": token,
             "refresh_token": refresh_token,
@@ -158,12 +183,16 @@ def login(data: LoginRequest):
             "email": data.email,
             "tenant_id": tenant_user.data["tenant_id"],
             "role": tenant_user.data["role"],
-            "company_name": tenant_user.data["tenants"]["name"],
-            "plan": tenant_user.data["tenants"]["plan"],
-            "country": tenant_user.data["tenants"].get("country", "NZ"),
-            "mobile": tenant_user.data["tenants"].get("mobile", "")
+            "company_name": tenant["name"],
+            "plan": tenant.get("plan"),
+            "status": tenant.get("status"),
+            "trial_ends_at": tenant.get("trial_ends_at"),
+            "country": tenant.get("country", "NZ"),
+            "mobile": tenant.get("mobile", "")
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
