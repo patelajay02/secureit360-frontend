@@ -87,8 +87,16 @@ function VoiceGuideModal({ finding, onClose }: { finding: any, onClose: () => vo
     utterance.pitch = 1
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
-    window.speechSynthesis.speak(utterance)
-    setSpeaking(true)
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      const english = voices.find(v => v.lang.startsWith("en")) || voices[0]
+      utterance.voice = english
+    }
+    window.speechSynthesis.cancel()
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance)
+      setSpeaking(true)
+    }, 100)
   }
 
   function handleClose() {
@@ -589,3 +597,4 @@ export default function DashboardPage() {
     </main>
   )
 }
+
