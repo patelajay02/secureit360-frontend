@@ -1,6 +1,6 @@
 // app/signup/page.js
 // SecureIT360 — Signup page
-// With reCAPTCHA, domain validation, business email validation
+// With reCAPTCHA, domain validation, business email validation, country selection
 
 "use client";
 
@@ -8,6 +8,15 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ReCAPTCHA from "react-google-recaptcha";
 import { setToken, setUser, publicFetch } from "../../lib/auth";
+
+const countries = [
+  { code: "AU", name: "Australia", currency: "aud" },
+  { code: "NZ", name: "New Zealand", currency: "nzd" },
+  { code: "IN", name: "India", currency: "inr" },
+  { code: "AE", name: "United Arab Emirates", currency: "aed" },
+  { code: "PI", name: "Pacific Islands", currency: "usd" },
+  { code: "OTHER", name: "Other", currency: "usd" },
+];
 
 function isValidDomain(domain) {
   const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
@@ -25,6 +34,7 @@ export default function SignupPage() {
 
   const [form, setForm] = useState({
     company_name: "",
+    country: "",
     domain: "",
     email: "",
     password: "",
@@ -42,6 +52,12 @@ export default function SignupPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
+    // Validate country
+    if (!form.country) {
+      setError("Please select where your business is based");
+      return;
+    }
 
     // Validate domain format
     if (!isValidDomain(form.domain)) {
@@ -81,6 +97,7 @@ export default function SignupPage() {
         method: "POST",
         body: JSON.stringify({
           company_name: form.company_name,
+          country: form.country,
           domain: form.domain,
           email: form.email,
           password: form.password,
@@ -96,11 +113,9 @@ export default function SignupPage() {
         return;
       }
 
-      // Save token and user
       setToken(data.access_token);
       setUser(data.user);
 
-      // Start first scan then redirect to scanning page
       await publicFetch("/scans/full", {
         method: "POST",
         body: JSON.stringify({ domain: form.domain }),
@@ -117,18 +132,22 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">SecureIT<span className="text-indigo-400">360</span></h1>
+          <h1 className="text-3xl font-bold text-white">
+            SecureIT<span className="text-indigo-400">360</span>
+          </h1>
           <p className="text-gray-400 mt-2">by Global Cyber Assurance</p>
         </div>
 
         {/* Card */}
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
-          <h2 className="text-xl font-semibold text-white mb-6">Create your account</h2>
+          <h2 className="text-xl font-semibold text-white mb-6">
+            Create your account
+          </h2>
 
           {error && (
             <div className="bg-red-900/40 border border-red-500 text-red-300 rounded-lg px-4 py-3 mb-6 text-sm">
@@ -140,21 +159,46 @@ export default function SignupPage() {
 
             {/* Company Name */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Company name</label>
+              <label className="block text-sm text-gray-400 mb-1">
+                Company name
+              </label>
               <input
                 type="text"
                 name="company_name"
                 value={form.company_name}
                 onChange={handleChange}
                 required
-                placeholder="Acme Plumbing Ltd"
+                placeholder="Your company name"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
+            {/* Country */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                Where is your business based?
+              </label>
+              <select
+                name="country"
+                value={form.country}
+                onChange={handleChange}
+                required
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="" disabled>Select your country</option>
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Domain */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Company domain</label>
+              <label className="block text-sm text-gray-400 mb-1">
+                Company domain
+              </label>
               <input
                 type="text"
                 name="domain"
@@ -164,12 +208,16 @@ export default function SignupPage() {
                 placeholder="yourcompany.com"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               />
-              <p className="text-xs text-gray-500 mt-1">Enter your domain without https:// e.g. yourcompany.com</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Enter your domain without https:// e.g. yourcompany.com
+              </p>
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Business email</label>
+              <label className="block text-sm text-gray-400 mb-1">
+                Business email
+              </label>
               <input
                 type="email"
                 name="email"
@@ -179,12 +227,16 @@ export default function SignupPage() {
                 placeholder="you@yourcompany.com"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               />
-              <p className="text-xs text-gray-500 mt-1">Must match your company domain</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Must match your company domain
+              </p>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Password</label>
+              <label className="block text-sm text-gray-400 mb-1">
+                Password
+              </label>
               <input
                 type="password"
                 name="password"
@@ -198,7 +250,9 @@ export default function SignupPage() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Confirm password</label>
+              <label className="block text-sm text-gray-400 mb-1">
+                Confirm password
+              </label>
               <input
                 type="password"
                 name="confirm_password"
@@ -214,7 +268,7 @@ export default function SignupPage() {
             <div className="flex justify-center">
               <ReCAPTCHA
                 ref={recaptchaRef}
-                sitekey="6LdauaQsAAAAIYiNTrpC1_iE4jZYlXkMCJrCeYF"
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                 theme="dark"
               />
             </div>
@@ -232,9 +286,10 @@ export default function SignupPage() {
 
           <p className="text-center text-gray-500 text-sm mt-6">
             Already have an account?{" "}
-            <a href="/login" className="text-indigo-400 hover:text-indigo-300">Log in</a>
+            <a href="/login" className="text-indigo-400 hover:text-indigo-300">
+              Log in
+            </a>
           </p>
-
         </div>
       </div>
     </div>

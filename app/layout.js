@@ -1,12 +1,12 @@
 // app/layout.js
 // SecureIT360 — Root layout
-// Wraps every page with shared components
 
 import "./globals.css";
 import { ToastProvider } from "../components/ui/Toast";
 import { Navbar } from "../components/ui/Navbar";
 import { BottomNav } from "../components/ui/BottomNav";
 import { SessionTimeout } from "../components/ui/SessionTimeout";
+import { TrialBanner } from "../components/ui/TrialBanner";
 
 export const metadata = {
   title: "SecureIT360 — Complete Cyber Protection",
@@ -23,6 +23,7 @@ export default function RootLayout({ children }) {
       <body className="bg-gray-950 text-white min-h-screen">
         <ToastProvider>
           <Navbar />
+          <TrialBanner />
           <main className="pb-20 md:pb-0">
             {children}
           </main>
