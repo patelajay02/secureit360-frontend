@@ -8,3 +8,4 @@ httpx
 python-jose
 passlib
 bcrypt
+shodan
