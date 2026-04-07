@@ -57,6 +57,7 @@ app.add_middleware(
         "http://localhost:3001",
         "https://secureit360.co",
         "https://secureit360.vercel.app",
+        "https://app.secureit360.co",
     ],
     allow_credentials=True,
     allow_methods=["*"],
