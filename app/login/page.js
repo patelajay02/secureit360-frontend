@@ -1,5 +1,5 @@
-// app/login/page.js
-// SecureIT360 - Login page
+﻿// app/login/page.js
+// SecureIT360 - Login page v2
 
 "use client";
 
@@ -56,7 +56,6 @@ export default function LoginPage() {
         mobile: data.mobile,
       });
 
-      // Save extra fields needed by dashboard
       localStorage.setItem("company_name", data.company_name || "");
       localStorage.setItem("country", data.country || "NZ");
       localStorage.setItem("plan", data.plan || "");
@@ -93,15 +92,13 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
 
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white">
-            SecureIT<span className="text-indigo-400">360</span>
+            SecureIT<span className="text-red-500">360</span>
           </h1>
           <p className="text-gray-400 mt-2">by Global Cyber Assurance</p>
         </div>
 
-        {/* Card */}
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
 
           {!showForgot ? (
@@ -115,7 +112,6 @@ export default function LoginPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Email address</label>
                   <input
@@ -125,7 +121,7 @@ export default function LoginPage() {
                     onChange={handleChange}
                     required
                     placeholder="you@yourcompany.com"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -138,7 +134,7 @@ export default function LoginPage() {
                     onChange={handleChange}
                     required
                     placeholder="Your password"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -146,7 +142,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowForgot(true)}
-                    className="text-sm text-indigo-400 hover:text-indigo-300"
+                    className="text-sm text-red-400 hover:text-red-300"
                   >
                     Forgot your password?
                   </button>
@@ -155,16 +151,15 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-900 text-white font-semibold py-3 rounded-lg transition-colors"
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white font-semibold py-3 rounded-lg transition-colors"
                 >
                   {loading ? "Logging in..." : "Log in"}
                 </button>
-
               </form>
 
               <p className="text-center text-gray-500 text-sm mt-6">
                 Do not have an account?{" "}
-                <a href="/signup" className="text-indigo-400 hover:text-indigo-300">Sign up free</a>
+                <a href="/signup" className="text-red-400 hover:text-red-300">Sign up free</a>
               </p>
             </>
           ) : (
@@ -188,14 +183,14 @@ export default function LoginPage() {
                       onChange={(e) => setForgotEmail(e.target.value)}
                       required
                       placeholder="you@yourcompany.com"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-900 text-white font-semibold py-3 rounded-lg transition-colors"
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white font-semibold py-3 rounded-lg transition-colors"
                   >
                     {loading ? "Sending..." : "Send reset link"}
                   </button>
@@ -205,7 +200,7 @@ export default function LoginPage() {
               <div className="text-center mt-4">
                 <button
                   onClick={() => setShowForgot(false)}
-                  className="text-sm text-indigo-400 hover:text-indigo-300"
+                  className="text-sm text-red-400 hover:text-red-300"
                 >
                   Back to login
                 </button>
