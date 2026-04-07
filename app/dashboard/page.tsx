@@ -229,11 +229,11 @@ export default function DashboardPage() {
         {isTrial && (
           <div className="bg-gray-900 border border-red-800 rounded-2xl p-6 mb-8 text-center">
             <p className="text-red-400 font-semibold text-lg mb-1">
-              Free trial — {trialDaysLeft > 0 ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining` : 'expires today'}
+              Free trial â€” {trialDaysLeft > 0 ? `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining` : 'expires today'}
             </p>
             <p className="text-gray-400 text-sm mb-4">Your free trial includes Dark Web and Email Security scans only. Upgrade to unlock all 6 scan engines, full Ransom Risk Score, Governance Score, and regulatory compliance mapping.</p>
             <a href="/pricing" className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3 rounded-lg">
-              Subscribe Now — from $250 NZD/month + GST
+              Subscribe Now â€” from $250 NZD/month + GST
             </a>
           </div>
         )}
