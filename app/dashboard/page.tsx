@@ -140,9 +140,6 @@ function VoiceGuideModal({ finding, onClose }: { finding: any, onClose: () => vo
     if (speaking) {
       setTimeout(() => speakStep(prev), 200)
     }
-  } else {
-      setCurrentStep(prev)
-    }
   }
 
   function toggleDone(i: number) {
@@ -669,4 +666,3 @@ export default function DashboardPage() {
     </main>
   )
 }
-
