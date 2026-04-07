@@ -70,13 +70,13 @@ export default function DashboardPage() {
       case 'auto':
         return (
           <span className="text-xs px-2 py-1 rounded font-medium bg-green-900/50 text-green-300">
-            ✅ Auto-fixed
+            Auto-fixed
           </span>
         )
       case 'voice':
         return (
           <button className="text-xs px-2 py-1 rounded font-medium bg-amber-900/50 text-amber-300 hover:bg-amber-900">
-            🎧 Voice guide
+            Voice guide
           </button>
         )
       case 'specialist':
@@ -85,7 +85,7 @@ export default function DashboardPage() {
             onClick={() => window.location.href = 'mailto:governance@secureit360.co'}
             className="text-xs px-2 py-1 rounded font-medium bg-red-900/50 text-red-300 hover:bg-red-900"
           >
-            🔴 Get specialist
+            Get specialist
           </button>
         )
       default:
@@ -115,29 +115,29 @@ export default function DashboardPage() {
     switch(country) {
       case 'AU':
         return [
-          { name: 'AU Privacy Act 1988', score: compliance?.au_privacy ?? 0, detail: 'Amended Dec 2024 — up to $50M fine' },
-          { name: 'AU Privacy Amendment 2024', score: compliance?.au_privacy_amendment ?? 0, detail: 'On-the-spot fines — no court needed' },
-          { name: 'AU Cyber Security Act 2024', score: compliance?.au_cyber_security_act ?? 0, detail: 'Incident reporting readiness — 72hr obligation' },
+          { name: 'AU Privacy Act 1988', score: compliance?.au_privacy ?? 0, detail: 'Amended Dec 2024 - up to $50M fine' },
+          { name: 'AU Privacy Amendment 2024', score: compliance?.au_privacy_amendment ?? 0, detail: 'On-the-spot fines - no court needed' },
+          { name: 'AU Cyber Security Act 2024', score: compliance?.au_cyber_security_act ?? 0, detail: 'Incident reporting readiness - 72hr obligation' },
           { name: 'AU Corporations Act', score: compliance?.au_corporations ?? 0, detail: 'Director personal liability' },
           { name: 'Essential Eight', score: compliance?.essential_eight ?? 0, detail: 'Mandatory for government, recommended all' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
       case 'UAE':
         return [
-          { name: 'UAE PDPL 2021', score: compliance?.uae_pdpl ?? 0, detail: 'Personal data protection — up to AED 5M' },
+          { name: 'UAE PDPL 2021', score: compliance?.uae_pdpl ?? 0, detail: 'Personal data protection - up to AED 5M' },
           { name: 'UAE NESA Standards', score: compliance?.uae_nesa ?? 0, detail: 'National cybersecurity standards' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
       case 'IN':
         return [
-          { name: 'India DPDP Act 2023', score: compliance?.india_dpdp ?? 0, detail: 'Digital Personal Data Protection — up to ₹250Cr' },
+          { name: 'India DPDP Act 2023', score: compliance?.india_dpdp ?? 0, detail: 'Digital Personal Data Protection - up to Rs 250Cr' },
           { name: 'CERT-In Guidelines 2022', score: compliance?.cert_in ?? 0, detail: 'Incident reporting within 6 hours' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
       default:
         return [
           { name: 'NZ Privacy Act 2020', score: compliance?.nz_privacy ?? 0, detail: 'Breach notification within 72 hours' },
-          { name: 'NZ Privacy Amendment 2025', score: compliance?.nz_privacy_amendment ?? 0, detail: 'IPP 3A — in force May 2026' },
+          { name: 'NZ Privacy Amendment 2025', score: compliance?.nz_privacy_amendment ?? 0, detail: 'IPP 3A - in force May 2026' },
           { name: 'NZ Companies Act', score: compliance?.nz_companies ?? 0, detail: 'Director duty of care' },
           { name: 'NZ NCSC Guidelines', score: compliance?.nz_ncsc ?? 0, detail: 'Baseline security controls' },
           { name: 'Essential Eight', score: compliance?.essential_eight ?? 0, detail: '8 mitigation strategies' },
@@ -185,10 +185,11 @@ export default function DashboardPage() {
           SecureIT<span className="text-red-500">360</span>
         </h1>
         <div className="flex items-center gap-6">
+          <a href="/dashboard" className="text-gray-400 hover:text-white text-sm">Dashboard</a>
+          <a href="/dashboard/scanning" className="text-gray-400 hover:text-white text-sm">Run Scan</a>
+          <a href="/settings" className="text-gray-400 hover:text-white text-sm">Settings</a>
           <span className="text-gray-400 text-sm">{companyName}</span>
-          <button onClick={handleLogout} className="text-gray-400 hover:text-white text-sm">
-            Sign out
-          </button>
+          <button onClick={handleLogout} className="text-gray-400 hover:text-white text-sm">Sign out</button>
         </div>
       </nav>
 
@@ -202,14 +203,16 @@ export default function DashboardPage() {
         {!dashboard?.ransom_score && (
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 text-center mb-8">
             <p className="text-gray-300 text-lg mb-2">No scans completed yet.</p>
-            <p className="text-gray-500">Run your first scan to see your Ransom Risk Score.</p>
+            <p className="text-gray-500 mb-6">Run your first scan to see your security risk score, compliance status, and what needs fixing.</p>
+            <a href="/dashboard/scanning" className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg text-sm">
+              Run Your First Scan
+            </a>
           </div>
         )}
 
         {dashboard?.ransom_score && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
-            {/* Ransom Risk Score */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
               <h3 className="text-gray-400 text-sm mb-4 uppercase tracking-wide">Ransom Risk Score</h3>
               <div className="relative inline-flex items-center justify-center mb-4">
@@ -228,7 +231,6 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-sm mt-2">Higher score = higher risk of ransomware attack</p>
             </div>
 
-            {/* Governance Score */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
               <h3 className="text-gray-400 text-sm mb-4 uppercase tracking-wide">Governance Score</h3>
               <div className="relative inline-flex items-center justify-center mb-4">
@@ -247,7 +249,6 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-sm mt-2">Policy and process gaps that technical fixes alone cannot resolve.</p>
             </div>
 
-            {/* If Attacked Today */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
               <h3 className="text-gray-400 text-sm mb-4 uppercase tracking-wide">If Attacked Today</h3>
               <div className="space-y-3">
@@ -257,7 +258,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-800 pb-3">
                   <span className="text-gray-400 text-sm">Expected downtime</span>
-                  <span className="text-white font-semibold text-sm">14 — 28 days</span>
+                  <span className="text-white font-semibold text-sm">14 - 28 days</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-800 pb-3">
                   <span className="text-gray-400 text-sm">Director personal liability</span>
@@ -265,8 +266,6 @@ export default function DashboardPage() {
                     {penaltyInfo?.liability ?? 'High'}
                   </span>
                 </div>
-
-                {/* Tiered penalty exposure */}
                 <div className="border-b border-gray-800 pb-3">
                   <p className="text-gray-400 text-xs mb-2 uppercase tracking-wide">Indicative regulatory exposure</p>
                   <p className="text-sm mb-1">{penaltyInfo?.fine_exposure}</p>
@@ -277,27 +276,23 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-400">{penaltyInfo.fine_if_low}</p>
                   )}
                 </div>
-
-                {/* Residual risk */}
                 {penaltyInfo?.residual_risk && (
                   <div className="border-b border-gray-800 pb-3">
                     <p className="text-gray-500 text-xs">{penaltyInfo.residual_risk}</p>
                     {penaltyInfo?.residual_steps && (
                       <ul className="mt-2 space-y-1">
                         {penaltyInfo.residual_steps.map((step: string, i: number) => (
-                          <li key={i} className="text-gray-600 text-xs">• {step}</li>
+                          <li key={i} className="text-gray-600 text-xs">- {step}</li>
                         ))}
                       </ul>
                     )}
                   </div>
                 )}
-
                 {penaltyInfo?.new_risk && (
                   <div className="border-b border-gray-800 pb-3">
                     <p className="text-amber-500 text-xs italic">{penaltyInfo.new_risk}</p>
                   </div>
                 )}
-
                 {penaltyInfo?.ransom_reporting && (
                   <div>
                     <p className="text-gray-500 text-xs">{penaltyInfo.ransom_reporting}</p>
@@ -309,7 +304,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Findings summary */}
         {dashboard?.findings_summary && (
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 text-center">
@@ -327,7 +321,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Regulatory Compliance */}
         {dashboard?.ransom_score && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
             <div className="flex justify-between items-center mb-4">
@@ -354,7 +347,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Top findings */}
         {dashboard?.top_findings && dashboard.top_findings.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
             <h3 className="text-white font-semibold mb-4">Your top security issues</h3>
@@ -393,21 +385,18 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-
-            {/* Contact line */}
             <div className="mt-6 pt-4 border-t border-gray-800">
               <p className="text-gray-500 text-xs">
                 Not sure what to do next? Email us at{' '}
                 <a href="mailto:governance@secureit360.co" className="text-gray-400 hover:text-white underline">
                   governance@secureit360.co
                 </a>
-                {' '}and a qualified cyber security specialist will review your results and explain exactly what your business needs — in plain English, no jargon, no obligation.
+                {' '}and a qualified cyber security specialist will review your results and explain exactly what your business needs - in plain English, no jargon, no obligation.
               </p>
             </div>
           </div>
         )}
 
-        {/* Legal disclaimer */}
         {dashboard?.ransom_score && penaltyInfo?.disclaimer && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mt-6">
             <p className="text-gray-600 text-xs leading-relaxed">
@@ -418,7 +407,7 @@ export default function DashboardPage() {
         )}
 
         <p className="text-center text-gray-700 text-xs mt-8">
-          © 2026 Global Cyber Assurance. All rights reserved.
+          � 2026 Global Cyber Assurance. All rights reserved.
         </p>
 
       </div>
