@@ -564,12 +564,25 @@ export default function DashboardPage() {
                   {penaltyInfo?.fine_if_moderate && <p className="text-sm mb-1 text-gray-400">{penaltyInfo.fine_if_moderate}</p>}
                   {penaltyInfo?.fine_if_low && <p className="text-sm text-gray-400">{penaltyInfo.fine_if_low}</p>}
                 </div>
-                {penaltyInfo?.ransom_reporting && <div><p className="text-gray-500 text-xs">{penaltyInfo.ransom_reporting}</p></div>}
+                {penaltyInfo?.ransom_reporting && (
+                  <div className="bg-amber-900/20 border border-amber-800 rounded-lg px-3 py-2 mt-2">
+                    <p className="text-amber-300 text-xs font-medium">{penaltyInfo.ransom_reporting}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
+        <div className="bg-gray-900 border border-red-900/50 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-white font-semibold mb-1">Not sure what to do next?</p>
+            <p className="text-gray-400 text-sm">A qualified cyber security specialist will review your results and explain exactly what your business needs - in plain English, no jargon, no obligation.</p>
+          </div>
+          <a href="mailto:governance@secureit360.co" className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-3 rounded-lg text-sm whitespace-nowrap">
+            Email us now
+          </a>
+        </div>
         {dashboard?.findings_summary && (
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 text-center">
@@ -667,4 +680,6 @@ export default function DashboardPage() {
     </main>
   )
 }
+
+
 
