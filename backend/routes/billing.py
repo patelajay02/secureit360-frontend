@@ -38,7 +38,6 @@ async def get_subscription_info(tenant=Depends(get_current_tenant)):
         result = supabase_admin.table("subscriptions")\
             .select("*")\
             .eq("tenant_id", tenant_id)\
-            .order("created_at", desc=True)\
             .limit(1)\
             .execute()
 
@@ -52,9 +51,8 @@ async def get_subscription_info(tenant=Depends(get_current_tenant)):
             tenant_data = tenant_result.data or {}
             return {
                 "plan_name": "Trial",
-                "price_nzd": "$0",
                 "status": "Trial",
-                "domains_allowed": 1,
+                "max_domains": 1,
                 "created_at": tenant_data.get("created_at"),
                 "renewal_date": None,
             }
@@ -63,15 +61,17 @@ async def get_subscription_info(tenant=Depends(get_current_tenant)):
 
         stripe_status = None
         if sub.get("stripe_subscription_id"):
-            stripe_status = get_subscription(sub["stripe_subscription_id"])
+            try:
+                stripe_status = get_subscription(sub["stripe_subscription_id"])
+            except Exception:
+                pass
 
         return {
-            "plan_name": sub.get("plan_name", "Starter"),
-            "price_nzd": sub.get("price_nzd", "$250"),
+            "plan_name": sub.get("plan", "Starter"),
             "status": stripe_status["status"] if stripe_status else sub.get("status", "active"),
-            "domains_allowed": sub.get("domains_allowed", 1),
+            "max_domains": sub.get("max_domains", 1),
             "created_at": sub.get("created_at"),
-            "renewal_date": stripe_status["current_period_end"] if stripe_status else sub.get("renewal_date"),
+            "renewal_date": stripe_status["current_period_end"] if stripe_status else sub.get("current_period_end"),
         }
 
     except Exception as e:
@@ -177,18 +177,12 @@ async def stripe_webhook(request: Request):
         subscription_id = data.get("subscription")
 
         if tenant_id:
-            from services.stripe_service import PLANS
-            plan_data = PLANS.get(plan, PLANS["starter"])
-
             supabase_admin.table("subscriptions").upsert({
                 "tenant_id": tenant_id,
-                "plan_name": plan_data["name"],
-                "plan_key": plan,
-                "price_nzd": plan_data["price_nzd"],
-                "domains_allowed": plan_data["domains_allowed"],
-                "users_allowed": plan_data["users_allowed"],
+                "plan": plan,
                 "stripe_subscription_id": subscription_id,
                 "status": "active",
+                "max_domains": 3 if plan == "pro" else 10 if plan == "enterprise" else 1,
             }).execute()
 
             supabase_admin.table("tenants")\
@@ -198,15 +192,17 @@ async def stripe_webhook(request: Request):
 
     elif event_type == "customer.subscription.deleted":
         subscription_id = data.get("id")
-        supabase_admin.table("subscriptions")\
-            .update({"status": "cancelled"})\
-            .eq("stripe_subscription_id", subscription_id)\
-            .execute()
 
         result = supabase_admin.table("subscriptions")\
             .select("tenant_id")\
             .eq("stripe_subscription_id", subscription_id)\
             .execute()
+
+        supabase_admin.table("subscriptions")\
+            .update({"status": "cancelled"})\
+            .eq("stripe_subscription_id", subscription_id)\
+            .execute()
+
         if result.data:
             supabase_admin.table("tenants")\
                 .update({"status": "cancelled"})\
