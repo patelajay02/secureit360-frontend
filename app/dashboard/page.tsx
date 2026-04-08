@@ -279,6 +279,14 @@ export default function DashboardPage() {
         setLogoUrl(data.logo_url)
         localStorage.setItem('logo_url', data.logo_url)
       }
+      if (data.status) {
+        setStatus(data.status)
+        localStorage.setItem('status', data.status)
+      }
+      if (data.trial_ends_at) {
+        setTrialEndsAt(data.trial_ends_at)
+        localStorage.setItem('trial_ends_at', data.trial_ends_at)
+      }
     } catch (err) {
       console.error('Failed to load dashboard')
     } finally {
@@ -659,3 +667,4 @@ export default function DashboardPage() {
     </main>
   )
 }
+
