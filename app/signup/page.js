@@ -113,15 +113,7 @@ export default function SignupPage() {
         return;
       }
 
-      setToken(data.access_token);
-      setUser(data.user);
-
-      await publicFetch("/scans/full", {
-        method: "POST",
-        body: JSON.stringify({ domain: form.domain }),
-      });
-
-      router.push("/dashboard/scanning");
+      router.push("/verify-email?email=" + encodeURIComponent(form.email));
 
     } catch (err) {
       setError("Something went wrong. Please try again.");
@@ -140,7 +132,7 @@ export default function SignupPage() {
           <h1 className="text-3xl font-bold text-white">
             SecureIT<span className="text-indigo-400">360</span>
           </h1>
-          <p className="text-gray-400 mt-2">by Global Cyber Assurance</p>
+          <p className="text-gray-400 mt-2">Start your free 7-day trial</p>
         </div>
 
         {/* Card */}
