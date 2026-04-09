@@ -172,25 +172,40 @@ async def stripe_webhook(request: Request):
     data = event["data"]["object"]
 
     if event_type == "checkout.session.completed":
-        metadata = data.get("metadata") if hasattr(data, "get") else {}
-        if not isinstance(metadata, dict):
-            metadata = dict(metadata) if metadata else {}
+        try:
+            metadata = dict(data.metadata) if hasattr(data, "metadata") else {}
+        except Exception:
+            metadata = {}
         tenant_id = metadata.get("tenant_id")
         plan = metadata.get("plan", "starter")
-        subscription_id = data.get("subscription") if hasattr(data, "get") else getattr(data, "subscription", None)
-        if tenant_id:
-            supabase_admin.table("subscriptions").upsert({
-                "tenant_id": tenant_id,
-                "plan": plan,
-                "stripe_subscription_id": subscription_id,
-                "status": "active",
-                "max_domains": 3 if plan == "pro" else 10 if plan == "enterprise" else 1,
-            }).execute()
+        try:
+            subscription_id = data.subscription if hasattr(data, "subscription") else None
+        except Exception:
+            subscription_id = None
 
-            supabase_admin.table("tenants")\
-                .update({"status": "active", "plan": plan})\
-                .eq("id", tenant_id)\
-                .execute()
+        print(f"[WEBHOOK] tenant_id={tenant_id} plan={plan} subscription_id={subscription_id}")
+
+        if tenant_id:
+            try:
+                supabase_admin.table("subscriptions").upsert({
+                    "tenant_id": tenant_id,
+                    "plan": plan,
+                    "stripe_subscription_id": subscription_id,
+                    "status": "active",
+                    "max_domains": 3 if plan == "pro" else 10 if plan == "enterprise" else 1,
+                }).execute()
+                print(f"[WEBHOOK] Subscription upserted")
+            except Exception as e:
+                print(f"[WEBHOOK] Subscription upsert error: {e}")
+
+            try:
+                supabase_admin.table("tenants")\
+                    .update({"status": "active", "plan": plan})\
+                    .eq("id", tenant_id)\
+                    .execute()
+                print(f"[WEBHOOK] Tenant updated to active")
+            except Exception as e:
+                print(f"[WEBHOOK] Tenant update error: {e}")
 
     elif event_type == "customer.subscription.deleted":
         subscription_id = data.get("id")
