@@ -32,8 +32,15 @@ def calculate_ransom_score(findings: list) -> int:
 
 def calculate_governance_score(findings: list) -> int:
     gaps = [f for f in findings if f.get("governance_gap")]
-    score = len(gaps) * 12
-    return min(100, score)
+    score = 100
+    for f in gaps:
+        if f.get("severity") == "critical":
+            score -= 20
+        elif f.get("severity") == "moderate":
+            score -= 10
+        elif f.get("severity") == "low":
+            score -= 5
+    return max(0, min(100, score))
 
 
 def get_penalty_info(findings: list, country: str) -> dict:
@@ -349,5 +356,6 @@ def get_dashboard(authorization: str = Header(...)):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 
