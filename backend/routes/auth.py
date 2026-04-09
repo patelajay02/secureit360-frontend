@@ -92,9 +92,12 @@ def register(data: RegisterRequest):
                 link_response = supabase_admin.auth.admin.generate_link({
                     "type": "signup",
                     "email": email,
+                    "options": {
+                        "redirect_to": "https://app.secureit360.co/login"
+                    }
                 })
                 verification_url = link_response.properties.action_link
-                print(f"[EMAIL] URL generated successfully")
+                print(f"[EMAIL] URL generated: {verification_url}")
 
                 sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
                 message = Mail(
@@ -555,4 +558,34 @@ def admin_create_account(data: CreateAccountRequest):
 
     except Exception as e:
         print(f"[CREATE ACCOUNT ERROR] {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# --- VERIFY EMAIL CALLBACK ----------------------------------------------
+
+@router.post("/verify-email")
+def verify_email(data: dict):
+    try:
+        user_id = data.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Missing user_id")
+
+        tenant_user = supabase_admin.table("tenant_users")\
+            .select("tenant_id")\
+            .eq("user_id", user_id)\
+            .single()\
+            .execute()
+
+        tenant_id = tenant_user.data["tenant_id"]
+
+        supabase_admin.table("tenants")\
+            .update({"status": "trial"})\
+            .eq("id", tenant_id)\
+            .eq("status", "pending")\
+            .execute()
+
+        return {"message": "Account activated successfully"}
+
+    except Exception as e:
+        print(f"[VERIFY EMAIL ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
