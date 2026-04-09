@@ -50,11 +50,7 @@ def register(data: RegisterRequest):
                 detail="This domain is already registered. If you believe this is an error, contact governance@secureit360.co"
             )
 
-        auth_response = supabase_admin.auth.admin.create_user({
-            "email": data.email,
-            "password": data.password,
-            "email_confirm": False
-        })
+        auth_response = supabase.auth.sign_up({"email": data.email, "password": data.password})
         user_id = auth_response.user.id
 
         slug = data.company_name.lower().replace(" ", "-")
@@ -592,5 +588,6 @@ def verify_email(data: dict):
     except Exception as e:
         print(f"[VERIFY EMAIL ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
 
 
