@@ -43,7 +43,7 @@ export default function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 py-20 text-center">
         <div className="inline-flex items-center gap-2 bg-red-900/30 border border-red-800 rounded-full px-4 py-1.5 mb-8">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          <span className="text-red-300 text-sm font-medium">Built for New Zealand and Australian businesses</span>
+          <span className="text-red-300 text-sm font-medium">Trusted by businesses across the Asia-Pacific region</span>
         </div>
         <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
           Know Your Cyber Risk<br />
@@ -203,46 +203,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="max-w-6xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <h3 className="text-3xl font-bold text-white mb-4">Simple, Transparent Pricing</h3>
-          <p className="text-gray-400">All prices in NZD + GST. Start with a free 7-day trial — no credit card required.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { name: "Starter", price: "$250", domains: "1 domain", users: "3 users", best: false },
-            { name: "Pro", price: "$500", domains: "3 domains", users: "10 users", best: true },
-            { name: "Enterprise", price: "$840", domains: "10 domains", users: "Unlimited users", best: false },
-          ].map((plan, i) => (
-            <div key={i} className={`rounded-2xl p-6 border ${plan.best ? 'border-red-500 bg-red-900/10' : 'border-gray-800 bg-gray-900'}`}>
-              {plan.best && <p className="text-red-400 text-xs font-semibold uppercase tracking-wide mb-3">Most popular</p>}
-              <h4 className="text-white font-bold text-xl mb-1">{plan.name}</h4>
-              <p className="text-3xl font-bold text-white mb-1">{plan.price}<span className="text-gray-400 text-base font-normal">/month</span></p>
-              <p className="text-gray-500 text-xs mb-6">+ GST</p>
-              <ul className="space-y-2 mb-6">
-                <li className="text-gray-300 text-sm">✓ All 6 scan engines</li>
-                <li className="text-gray-300 text-sm">✓ {plan.domains}</li>
-                <li className="text-gray-300 text-sm">✓ {plan.users}</li>
-                <li className="text-gray-300 text-sm">✓ Daily automated scans</li>
-                <li className="text-gray-300 text-sm">✓ Ransom Risk Score</li>
-                <li className="text-gray-300 text-sm">✓ Governance Score</li>
-                <li className="text-gray-300 text-sm">✓ Regulatory compliance mapping</li>
-              </ul>
-              <a href="/signup" className={`block text-center font-semibold py-3 rounded-lg transition-colors ${plan.best ? 'bg-red-600 hover:bg-red-700 text-white' : 'border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white'}`}>
-                Start free trial
-              </a>
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-gray-600 text-sm mt-6">AU clients billed in AUD. Prices shown are NZD indicative only. Sign up to see your local pricing.</p>
+      {/* Pricing Teaser */}
+      <section className="max-w-6xl mx-auto px-6 py-16 text-center">
+        <h3 className="text-3xl font-bold text-white mb-4">Simple, Transparent Pricing</h3>
+        <p className="text-gray-400 mb-2">Plans starting from <span className="text-white font-semibold">$250 NZD/month + GST</span></p>
+        <p className="text-gray-500 text-sm mb-8">Pricing shown in your local currency after signup. 7-day free trial included — no credit card required.</p>
+        <a href="/signup" className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors">See Pricing After Signup</a>
       </section>
 
       {/* CTA */}
       <section className="bg-red-900/20 border-y border-red-900/40">
         <div className="max-w-4xl mx-auto px-6 py-16 text-center">
           <h3 className="text-3xl font-bold text-white mb-4">Ready to Know Your Cyber Risk?</h3>
-          <p className="text-gray-400 mb-8 text-lg">Join businesses across New Zealand and Australia who trust SecureIT360 to protect their operations and their directors.</p>
+          <p className="text-gray-400 mb-8 text-lg">Join businesses across New Zealand, Australia, the Pacific Islands, India and the UAE who trust SecureIT360 to protect their operations and their directors.</p>
           <a href="/signup" className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-10 py-4 rounded-xl text-lg transition-colors">
             Start Your Free 7-Day Trial
           </a>
@@ -292,3 +265,6 @@ export default function LandingPage() {
     </main>
   )
 }
+
+
+
