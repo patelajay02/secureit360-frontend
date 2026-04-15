@@ -705,12 +705,13 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <p className="text-center text-gray-700 text-xs mt-8">&copy; 2026 Global Cyber Assurance. All rights reserved.</p>
+        <p className="text-center text-gray-700 text-xs mt-8">&copy; 2026 Global Cyber Assurance. All rights reserved. &nbsp;|&nbsp; <a href="/privacy" className="hover:text-gray-500 underline">Privacy Policy</a> &nbsp;|&nbsp; <a href="/terms" className="hover:text-gray-500 underline">Terms of Service</a> &nbsp;|&nbsp; <a href="/cookie-policy" className="hover:text-gray-500 underline">Cookie Policy</a></p>
 
       </div>
     </main>
   )
 }
+
 
 
 

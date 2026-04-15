@@ -1,5 +1,5 @@
-// app/signup/page.js
-// SecureIT360 — Signup page
+﻿// app/signup/page.js
+// SecureIT360 â€” Signup page
 // With reCAPTCHA, domain validation, business email validation, country selection
 
 "use client";
@@ -42,6 +42,7 @@ export default function SignupPage() {
   });
 
   const [error, setError] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
@@ -80,6 +81,12 @@ export default function SignupPage() {
     // Validate password length
     if (form.password.length < 8) {
       setError("Password must be at least 8 characters");
+      return;
+    }
+
+    // Validate terms agreement
+    if (!agreedToTerms) {
+      setError("Please agree to the Terms of Service and Privacy Policy to continue.");
       return;
     }
 
@@ -265,6 +272,16 @@ export default function SignupPage() {
               />
             </div>
 
+            {/* Terms Agreement */}
+            <div className="flex items-start gap-3">
+              <input type="checkbox" id="terms" checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 accent-red-600 cursor-pointer flex-shrink-0" />
+              <label htmlFor="terms" className="text-sm text-gray-400 cursor-pointer">
+                I agree to the <a href="/terms" target="_blank" className="text-red-400 hover:text-red-300 underline">Terms of Service</a> and <a href="/privacy" target="_blank" className="text-red-400 hover:text-red-300 underline">Privacy Policy</a>
+              </label>
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
@@ -287,3 +304,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+
