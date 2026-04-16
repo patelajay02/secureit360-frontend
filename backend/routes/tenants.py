@@ -1,10 +1,12 @@
 ﻿# backend/routes/tenants.py
 # SecureIT360 - Tenant routes
-# Handles logo upload and tenant profile management
+# Handles logo upload, tenant profile management, and director email
 
 import os
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 from middleware.auth_middleware import get_current_tenant
 from services.database import supabase_admin
 
@@ -108,3 +110,57 @@ async def get_profile(tenant=Depends(get_current_tenant)):
     except Exception as e:
         print(f"[PROFILE ERROR] {str(e)}")
         raise HTTPException(status_code=500, detail="Could not load profile.")
+
+
+# --- Get Tenant (Me) ----------------------------------------------------
+
+@router.get("/me")
+async def get_tenant_me(tenant=Depends(get_current_tenant)):
+    try:
+        tenant_id = tenant["tenant_id"]
+
+        result = supabase_admin.table("tenants")\
+            .select("id, name, director_email, logo_url")\
+            .eq("id", tenant_id)\
+            .single()\
+            .execute()
+
+        return result.data
+
+    except Exception as e:
+        print(f"[TENANT ME ERROR] {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not load tenant.")
+
+
+# --- Update Tenant (Me) -------------------------------------------------
+
+class TenantUpdateRequest(BaseModel):
+    director_email: Optional[str] = None
+
+@router.patch("/me")
+async def update_tenant_me(
+    body: TenantUpdateRequest,
+    tenant=Depends(get_current_tenant)
+):
+    try:
+        tenant_id = tenant["tenant_id"]
+
+        updates = {}
+        if body.director_email is not None:
+            updates["director_email"] = body.director_email if body.director_email.strip() != "" else None
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="Nothing to update.")
+
+        supabase_admin.table("tenants")\
+            .update(updates)\
+            .eq("id", tenant_id)\
+            .execute()
+
+        return {"message": "Tenant updated successfully."}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[TENANT UPDATE ERROR] {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not update tenant.")

@@ -45,6 +45,10 @@ export default function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [companyName, setCompanyName] = useState("");
 
+  // Director email
+  const [directorEmail, setDirectorEmail] = useState("");
+  const [directorEmailSaving, setDirectorEmailSaving] = useState(false);
+
   useEffect(() => {
     if (!requireAuth(router)) return;
     setCompanyName(localStorage.getItem("company_name") || "");
@@ -55,18 +59,43 @@ export default function SettingsPage() {
   async function fetchAll() {
     setLoading(true);
     try {
-      const [usersRes, domainsRes, billingRes] = await Promise.all([
+      const [usersRes, domainsRes, billingRes, tenantRes] = await Promise.all([
         authFetch("/users"),
         authFetch("/domains"),
         authFetch("/billing/subscription"),
+        authFetch("/tenants/me"),
       ]);
       setUsers(await usersRes.json());
       setDomains(await domainsRes.json());
       setBilling(await billingRes.json());
+      const tenantData = await tenantRes.json();
+      setDirectorEmail(tenantData.director_email || "");
     } catch (err) {
       setError("Could not load settings. Please refresh the page.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSaveDirectorEmail() {
+    setDirectorEmailSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await authFetch("/tenants/me", {
+        method: "PATCH",
+        body: JSON.stringify({ director_email: directorEmail }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.detail || "Could not save director email.");
+        return;
+      }
+      setSuccess("Director email saved. Weekly reports will be sent here every Monday at 8am.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setDirectorEmailSaving(false);
     }
   }
 
@@ -263,6 +292,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-lg font-semibold mb-6">Company Profile</h2>
 
+                {/* Logo card */}
                 <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
                   <h3 className="text-white font-medium mb-4">Company Logo</h3>
                   <p className="text-gray-400 text-sm mb-6">Upload your company logo to display it in your dashboard navigation. PNG, JPG or SVG, max 2MB.</p>
@@ -302,6 +332,35 @@ export default function SettingsPage() {
                       </button>
                     )}
                   </div>
+                </div>
+
+                {/* Director email card */}
+                <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                  <h3 className="text-white font-medium mb-1">Director / Board Email</h3>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Weekly cyber risk and governance summaries will be sent here every Monday at 8am. This can be a director, board member, or executive — whoever needs board-level visibility.
+                  </p>
+                  <div className="flex gap-3 items-start">
+                    <input
+                      type="email"
+                      value={directorEmail}
+                      onChange={(e) => setDirectorEmail(e.target.value)}
+                      placeholder="director@yourcompany.com"
+                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 text-sm"
+                    />
+                    <button
+                      onClick={handleSaveDirectorEmail}
+                      disabled={directorEmailSaving}
+                      className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {directorEmailSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                  {directorEmail && (
+                    <p className="text-gray-500 text-xs mt-3">
+                      Weekly reports will be sent to <span className="text-gray-300">{directorEmail}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             )}
