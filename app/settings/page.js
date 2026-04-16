@@ -56,20 +56,22 @@ export default function SettingsPage() {
     fetchAll();
   }, []);
 
-  async function fetchAll() {
+ async function fetchAll() {
     setLoading(true);
     try {
       const [usersRes, domainsRes, billingRes, tenantRes] = await Promise.all([
-        authFetch("/auth/users"),
-        authFetch("/domains"),
-        authFetch("/billing/subscription"),
-        authFetch("/tenants/me"),
+        authFetch("/auth/users").catch(() => null),
+        authFetch("/domains").catch(() => null),
+        authFetch("/billing/subscription").catch(() => null),
+        authFetch("/tenants/me").catch(() => null),
       ]);
-      setUsers(await usersRes.json());
-      setDomains(await domainsRes.json());
-      setBilling(await billingRes.json());
-      const tenantData = await tenantRes.json();
-      setDirectorEmail(tenantData.director_email || "");
+      if (usersRes) setUsers(await usersRes.json().catch(() => []));
+      if (domainsRes) setDomains(await domainsRes.json().catch(() => []));
+      if (billingRes) setBilling(await billingRes.json().catch(() => null));
+      if (tenantRes) {
+        const tenantData = await tenantRes.json().catch(() => ({}));
+        setDirectorEmail(tenantData.director_email || "");
+      }
     } catch (err) {
       setError("Could not load settings. Please refresh the page.");
     } finally {
