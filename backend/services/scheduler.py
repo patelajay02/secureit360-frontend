@@ -152,11 +152,11 @@ async def send_weekly_email_for_tenant(tenant, supabase):
     previous_score = 50
 
     if len(scans) >= 1:
-        current_score = scans[0].get("ransom_score", 50)
+        current_score = int(scans[0].get("ransom_score") or 50)
         governance_score = scans[0].get("governance_score")
 
     if len(scans) >= 2:
-        previous_score = scans[1].get("ransom_score", current_score)
+        previous_score = int(scans[1].get("ransom_score") or current_score)
 
     # Get top 3 recommended actions from latest scan
     top_actions = []
@@ -230,7 +230,7 @@ async def send_monthly_report_for_tenant(tenant, supabase):
 
     current_score = 50
     if current_scan.data:
-        current_score = current_scan.data[0].get("ransom_score", 50)
+        current_score = int(current_scan.data[0].get("ransom_score") or 50)
 
     latest_scan = supabase.table("scans")\
         .select("id")\
