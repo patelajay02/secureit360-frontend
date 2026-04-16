@@ -7,7 +7,7 @@
 import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timezone
+from datetime import datetime
 import pytz
 
 from services.email_service import (
@@ -129,7 +129,6 @@ async def send_weekly_email_for_tenant(tenant, supabase):
 
     # Use director_email if set, otherwise fall back to owner email
     to_email = tenant.get("director_email") or None
-
     if not to_email:
         to_email = get_owner_email(supabase, tenant_id)
 
@@ -139,7 +138,7 @@ async def send_weekly_email_for_tenant(tenant, supabase):
 
     # Get latest two completed scans
     latest_scan_result = supabase.table("scans")\
-        .select("id, ransom_risk_score, governance_score, director_liability_score")\
+        .select("id, ransom_score, governance_score")\
         .eq("tenant_id", tenant_id)\
         .eq("status", "complete")\
         .order("created_at", desc=True)\
@@ -150,16 +149,14 @@ async def send_weekly_email_for_tenant(tenant, supabase):
 
     current_score = 50
     governance_score = None
-    director_liability_score = None
     previous_score = 50
 
     if len(scans) >= 1:
-        current_score = scans[0].get("ransom_risk_score", 50)
+        current_score = scans[0].get("ransom_score", 50)
         governance_score = scans[0].get("governance_score")
-        director_liability_score = scans[0].get("director_liability_score")
 
     if len(scans) >= 2:
-        previous_score = scans[1].get("ransom_risk_score", current_score)
+        previous_score = scans[1].get("ransom_score", current_score)
 
     # Get top 3 recommended actions from latest scan
     top_actions = []
@@ -194,7 +191,7 @@ async def send_weekly_email_for_tenant(tenant, supabase):
         previous_score=previous_score,
         top_actions=top_actions,
         governance_score=governance_score,
-        director_liability_score=director_liability_score,
+        director_liability_score=None,
         unresolved_findings=unresolved_findings,
     )
 
@@ -224,7 +221,7 @@ async def send_monthly_report_for_tenant(tenant, supabase):
         return
 
     current_scan = supabase.table("scans")\
-        .select("ransom_risk_score")\
+        .select("ransom_score")\
         .eq("tenant_id", tenant_id)\
         .eq("status", "complete")\
         .order("created_at", desc=True)\
@@ -233,7 +230,7 @@ async def send_monthly_report_for_tenant(tenant, supabase):
 
     current_score = 50
     if current_scan.data:
-        current_score = current_scan.data[0].get("ransom_risk_score", 50)
+        current_score = current_scan.data[0].get("ransom_score", 50)
 
     latest_scan = supabase.table("scans")\
         .select("id")\
