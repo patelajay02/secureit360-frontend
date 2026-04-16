@@ -57,7 +57,7 @@ async def run_daily_scans(supabase):
 
 async def scan_tenant_and_alert(tenant, supabase):
     tenant_id = tenant.get("id")
-    company_name = tenant.get("company_name", "Your company")
+    company_name = tenant.get("name", "Your company")
 
     owner_email = get_owner_email(supabase, tenant_id)
     if not owner_email:
@@ -125,7 +125,7 @@ async def run_weekly_director_emails(supabase):
 
 async def send_weekly_email_for_tenant(tenant, supabase):
     tenant_id = tenant.get("id")
-    company_name = tenant.get("company_name", "Your company")
+    company_name = tenant.get("name", "Your company")
 
     # Use director_email if set, otherwise fall back to owner email
     to_email = tenant.get("director_email") or None
@@ -214,7 +214,7 @@ async def run_monthly_reports(supabase):
 
 async def send_monthly_report_for_tenant(tenant, supabase):
     tenant_id = tenant.get("id")
-    company_name = tenant.get("company_name", "Your company")
+    company_name = tenant.get("name", "Your company")
 
     owner_email = get_owner_email(supabase, tenant_id)
     if not owner_email:
