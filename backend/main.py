@@ -24,6 +24,7 @@ from routes.tenants import router as tenants_router
 # Import scheduler
 from services.scheduler import start_scheduler, send_weekly_email_for_tenant
 from services.database import supabase_admin
+from services.email_service import send_alert_email
 
 # Create Supabase client
 supabase = create_client(
@@ -104,5 +105,91 @@ async def test_weekly_email(x_test_secret: str = Header(...)):
 
         return {"message": f"Weekly email triggered for {sent} tenant(s).", "sent": sent}
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- TEMP: Test critical alert email ------------------------------------
+# Remove this endpoint after launch testing is complete
+
+@app.post("/test/alert-email")
+async def test_alert_email(x_test_secret: str = Header(...)):
+    """Triggers a critical alert email for Quality Mark tenant. For testing only."""
+    if x_test_secret != "secureit360-test-2024":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    try:
+        # Get Quality Mark tenant
+        tenant_result = supabase_admin.table("tenants")\
+            .select("*")\
+            .eq("name", "Quality Mark")\
+            .single()\
+            .execute()
+
+        tenant = tenant_result.data
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Quality Mark tenant not found.")
+
+        tenant_id = tenant["id"]
+        company_name = tenant.get("name", "Your company")
+
+        # Get owner email
+        user_result = supabase_admin.table("tenant_users")\
+            .select("user_id")\
+            .eq("tenant_id", tenant_id)\
+            .eq("role", "owner")\
+            .execute()
+
+        to_email = None
+        if user_result.data:
+            user_id = user_result.data[0].get("user_id")
+            if user_id:
+                auth_user = supabase_admin.auth.admin.get_user_by_id(user_id)
+                to_email = auth_user.user.email if auth_user and auth_user.user else None
+
+        if not to_email:
+            raise HTTPException(status_code=404, detail="No owner email found.")
+
+        # Use real findings from latest scan, or mock if none exist
+        latest_scan = supabase_admin.table("scans")\
+            .select("id")\
+            .eq("tenant_id", tenant_id)\
+            .eq("status", "complete")\
+            .order("created_at", desc=True)\
+            .limit(1)\
+            .execute()
+
+        findings = []
+        if latest_scan.data:
+            scan_id = latest_scan.data[0]["id"]
+            findings_result = supabase_admin.table("findings")\
+                .select("title, severity, description")\
+                .eq("scan_id", scan_id)\
+                .eq("severity", "critical")\
+                .limit(3)\
+                .execute()
+            findings = findings_result.data or []
+
+        # Fall back to mock findings if no critical ones exist
+        if not findings:
+            findings = [
+                {
+                    "title": "SSL certificate expires in 7 days",
+                    "severity": "critical",
+                    "description": "Your SSL certificate for qualitymark.co expires in 7 days. If not renewed, visitors will see a security warning and your site will be marked as unsafe.",
+                },
+                {
+                    "title": "Admin login has no two-factor authentication",
+                    "severity": "critical",
+                    "description": "Your admin account is not protected by two-factor authentication, making it vulnerable to password-based attacks.",
+                },
+            ]
+
+        send_alert_email(company_name, to_email, findings)
+
+        return {"message": f"Alert email sent to {to_email} with {len(findings)} finding(s)."}
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
