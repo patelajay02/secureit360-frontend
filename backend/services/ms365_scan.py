@@ -6,6 +6,19 @@ from services.database import supabase_admin
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
 
+def _get_frameworks(country: str, extra: list) -> list:
+    c = (country or "NZ").upper()
+    if c in ("UAE", "AE"):
+        base = ["UAE PDPL 2021", "DIFC Data Protection Law", "ADGM", "ISO 27001"]
+    elif c == "AU":
+        base = ["Australian Privacy Act 1988", "ISO 27001", "ASD Essential Eight"]
+    elif c == "IN":
+        base = ["DPDP Act 2023", "RBI Guidelines", "CERT-In", "ISO 27001"]
+    else:
+        base = ["NZ Privacy Act 2020", "ISO 27001", "ASD Essential Eight"]
+    return list(dict.fromkeys(base + (extra or [])))
+
+
 async def _refresh_token(integration: dict) -> str:
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -72,6 +85,22 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
         return {"findings_count": 0, "skipped": True}
 
     integration = result.data
+
+    # Fetch tenant country + user-selected compliance frameworks
+    tenant_r = supabase_admin.table("tenants")\
+        .select("country, compliance_frameworks")\
+        .eq("id", tenant_id)\
+        .single()\
+        .execute()
+
+    country = "NZ"
+    extra_frameworks: list = []
+    if tenant_r.data:
+        country = tenant_r.data.get("country") or "NZ"
+        extra_frameworks = tenant_r.data.get("compliance_frameworks") or []
+
+    frameworks = _get_frameworks(country, extra_frameworks)
+
     try:
         token = await _get_token(integration)
     except Exception as e:
@@ -97,10 +126,21 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "These accounts can be compromised through password spray or phishing alone."
                 ),
                 "governance_gap": True,
-                "regulations": ["NIST CSF", "ISO 27001", "ASD Essential Eight"],
+                "regulations": frameworks,
                 "fix_type": "configuration",
                 "score_impact": min(25, n * 3),
                 "status": "open",
+                "metadata": {
+                    "affected_users": [
+                        {
+                            "name": u.get("userDisplayName", "Unknown"),
+                            "email": u.get("userPrincipalName", ""),
+                            "last_login": None,
+                            "recommended_action": "Enable MFA immediately",
+                        }
+                        for u in no_mfa
+                    ]
+                },
             })
     except Exception as e:
         print(f"[MS365] MFA check failed: {e}")
@@ -131,10 +171,23 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "Stale accounts expand your attack surface and should be disabled or removed."
                 ),
                 "governance_gap": True,
-                "regulations": ["ISO 27001", "ASD Essential Eight"],
+                "regulations": frameworks,
                 "fix_type": "configuration",
                 "score_impact": min(15, n * 2),
                 "status": "open",
+                "metadata": {
+                    "affected_users": [
+                        {
+                            "name": u.get("displayName", "Unknown"),
+                            "email": u.get("userPrincipalName", ""),
+                            "last_login": (
+                                u.get("signInActivity", {}).get("lastSignInDateTime") or "Never"
+                            ),
+                            "recommended_action": "Disable or remove account",
+                        }
+                        for u in inactive
+                    ]
+                },
             })
     except Exception as e:
         print(f"[MS365] Inactive users check failed: {e}")
@@ -143,13 +196,19 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
     try:
         roles_data = await _graph_get(token, "/directoryRoles")
         admin_roles = [r for r in roles_data.get("value", []) if "admin" in r.get("displayName", "").lower()]
-        all_admins: set = set()
+
+        admin_map: dict = {}  # email/id → {name, roles[]}
         for role in admin_roles:
+            role_name = role.get("displayName", "Admin")
             members = await _graph_get(token, f"/directoryRoles/{role['id']}/members")
             for m in members.get("value", []):
-                all_admins.add(m.get("userPrincipalName") or m.get("id"))
-        if len(all_admins) > 3:
-            n = len(all_admins)
+                key = m.get("userPrincipalName") or m.get("id", "unknown")
+                if key not in admin_map:
+                    admin_map[key] = {"name": m.get("displayName", "Unknown"), "email": key, "roles": []}
+                admin_map[key]["roles"].append(role_name)
+
+        if len(admin_map) > 3:
+            n = len(admin_map)
             findings.append({
                 "tenant_id": tenant_id,
                 "scan_id": scan_id,
@@ -162,10 +221,22 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "Best practice is to limit admin access to 2–3 dedicated break-glass accounts."
                 ),
                 "governance_gap": True,
-                "regulations": ["NIST CSF", "ISO 27001", "ASD Essential Eight"],
+                "regulations": frameworks,
                 "fix_type": "configuration",
                 "score_impact": min(15, n * 2),
                 "status": "open",
+                "metadata": {
+                    "affected_users": [
+                        {
+                            "name": info["name"],
+                            "email": info["email"],
+                            "roles": ", ".join(info["roles"]),
+                            "last_login": None,
+                            "recommended_action": "Review and remove unnecessary admin access",
+                        }
+                        for info in admin_map.values()
+                    ]
+                },
             })
     except Exception as e:
         print(f"[MS365] Admin check failed: {e}")
@@ -202,10 +273,11 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "Uncontrolled external sharing can expose sensitive business data to unauthorised parties."
                 ),
                 "governance_gap": True,
-                "regulations": ["Privacy Act 2020 (NZ)", "Privacy Act 1988 (AU)", "ISO 27001"],
+                "regulations": frameworks,
                 "fix_type": "configuration",
                 "score_impact": min(20, external_count * 2),
                 "status": "open",
+                "metadata": {"external_share_count": external_count},
             })
     except Exception as e:
         print(f"[MS365] External sharing check failed: {e}")

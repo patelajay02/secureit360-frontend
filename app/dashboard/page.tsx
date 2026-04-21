@@ -60,6 +60,129 @@ function getVoiceSteps(title: string): string[] {
   ]
 }
 
+const REAUTH_TTL_MS = 15 * 60 * 1000
+const REAUTH_KEY = 'ms365_reauth_ts'
+
+function isReauthValid(): boolean {
+  try {
+    const ts = sessionStorage.getItem(REAUTH_KEY)
+    return !!ts && Date.now() - parseInt(ts, 10) < REAUTH_TTL_MS
+  } catch { return false }
+}
+
+function markReauthValid() {
+  try { sessionStorage.setItem(REAUTH_KEY, String(Date.now())) } catch {}
+}
+
+function ReauthModal({ onVerified, onClose }: { onVerified: () => void, onClose: () => void }) {
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function handleSubmit(e: { preventDefault(): void }) {
+    e.preventDefault()
+    setLoading(true)
+    setErr('')
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/reauth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password }),
+      })
+      if (!res.ok) { setErr('Incorrect password. Please try again.'); return }
+      markReauthValid()
+      onVerified()
+    } catch {
+      setErr('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 w-full max-w-sm">
+        <div className="flex justify-between items-start mb-1">
+          <h3 className="text-white font-semibold text-lg">Confirm your identity</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl">✕</button>
+        </div>
+        <p className="text-gray-400 text-sm mb-5">
+          This finding contains personal data (user names and emails). Re-enter your password to view the affected accounts.
+        </p>
+        {err && <p className="text-red-400 text-sm mb-3">{err}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your password"
+            required
+            autoFocus
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 text-sm"
+          />
+          <div className="flex gap-3">
+            <button type="submit" disabled={loading || !password}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg text-sm disabled:opacity-50">
+              {loading ? 'Verifying...' : 'Confirm'}
+            </button>
+            <button type="button" onClick={onClose}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 rounded-lg text-sm">
+              Cancel
+            </button>
+          </div>
+        </form>
+        <p className="text-gray-600 text-xs mt-4 text-center">Access is cached for 15 minutes.</p>
+      </div>
+    </div>
+  )
+}
+
+function MS365DetailsModal({ finding, onClose }: { finding: any, onClose: () => void }) {
+  const users: any[] = finding?.metadata?.affected_users || []
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-white font-semibold text-lg pr-4">{finding.title}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl flex-shrink-0">✕</button>
+        </div>
+        <p className="text-gray-400 text-sm mb-5">{finding.description}</p>
+        {users.length > 0 ? (
+          <div>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Affected accounts ({users.length})</p>
+            <div className="space-y-2">
+              {users.map((u, i) => (
+                <div key={i} className="bg-gray-800 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{u.name || 'Unknown'}</p>
+                    <p className="text-gray-400 text-xs truncate">{u.email || '—'}</p>
+                    {u.roles && <p className="text-gray-500 text-xs mt-0.5">Roles: {u.roles}</p>}
+                    {u.last_login && u.last_login !== 'Never' && (
+                      <p className="text-gray-600 text-xs mt-0.5">
+                        Last login: {new Date(u.last_login).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                    {u.last_login === 'Never' && <p className="text-gray-600 text-xs mt-0.5">Last login: Never</p>}
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded bg-amber-900/40 text-amber-300 border border-amber-800 flex-shrink-0 self-start sm:self-auto">
+                    {u.recommended_action}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No detailed user data available.</p>
+        )}
+        <div className="mt-6 pt-4 border-t border-gray-800">
+          <p className="text-gray-500 text-xs">Need help? Email <a href="mailto:governance@secureit360.co" className="text-gray-400 underline">governance@secureit360.co</a></p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function VoiceGuideModal({ finding, onClose }: { finding: any, onClose: () => void }) {
   const [speaking, setSpeaking] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
@@ -252,6 +375,16 @@ export default function DashboardPage() {
   const [voiceFinding, setVoiceFinding] = useState<any>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [reauthPending, setReauthPending] = useState<any>(null)
+  const [detailsFinding, setDetailsFinding] = useState<any>(null)
+
+  function handleViewDetails(finding: any) {
+    if (isReauthValid()) {
+      setDetailsFinding(finding)
+    } else {
+      setReauthPending(finding)
+    }
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -456,6 +589,15 @@ export default function DashboardPage() {
 
       {voiceFinding && (
         <VoiceGuideModal finding={voiceFinding} onClose={() => setVoiceFinding(null)} />
+      )}
+      {reauthPending && (
+        <ReauthModal
+          onVerified={() => { setDetailsFinding(reauthPending); setReauthPending(null) }}
+          onClose={() => setReauthPending(null)}
+        />
+      )}
+      {detailsFinding && (
+        <MS365DetailsModal finding={detailsFinding} onClose={() => setDetailsFinding(null)} />
       )}
 
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-4">
@@ -681,7 +823,17 @@ export default function DashboardPage() {
                           ))}
                         </div>
                       )}
-                      <div className="mt-2">{getFixButton(finding.fix_type, finding)}</div>
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        {getFixButton(finding.fix_type, finding)}
+                        {finding.engine === 'microsoft365' && finding.metadata?.affected_users?.length > 0 && (
+                          <button
+                            onClick={() => handleViewDetails(finding)}
+                            className="text-xs px-2 py-1 rounded font-medium bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-800"
+                          >
+                            View affected users
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

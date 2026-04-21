@@ -1,7 +1,4 @@
 # SecureIT360 - Regulatory Mapping Engine
-# Maps every finding to every regulation it breaches.
-# The client never needs to know which law applies.
-# The platform handles it invisibly.
 
 REGULATORY_MAPPINGS = {
     "darkweb": {
@@ -56,35 +53,100 @@ REGULATORY_MAPPINGS = {
             "AU Corporations Act 2001 — Section 180: Director duty of care"
         ],
         "plain_english": "Publicly accessible cloud storage containing personal information is a notifiable privacy breach under both NZ and AU law. Directors may face personal liability."
-    }
+    },
+    "microsoft365": {
+        "regulations": [
+            "ISO 27001 — A.9: Access control",
+            "ISO 27001 — A.9.4: System and application access control",
+            "ASD Essential Eight — Restrict administrative privileges",
+            "ASD Essential Eight — Multi-factor authentication"
+        ],
+        "plain_english": "Microsoft 365 misconfigurations — including missing MFA, stale accounts, and excessive admin access — create direct pathways for account compromise and data breaches."
+    },
 }
 
-# Severity to regulation urgency mapping
+# Country → engine → additional regulation strings to prepend
+_COUNTRY_OVERRIDES: dict = {
+    "AU": {
+        "microsoft365": [
+            "AU Privacy Act 1988 — APP 11: Security of personal information",
+            "AU Privacy Act 1988 — Notifiable Data Breach Scheme",
+        ],
+        "darkweb": [],
+        "email": [],
+        "network": [],
+        "website": [],
+        "devices": [],
+        "cloud": [],
+    },
+    "IN": {
+        "microsoft365": [
+            "DPDP Act 2023 — Data fiduciary obligations",
+            "CERT-In Guidelines — Incident reporting within 6 hours",
+        ],
+        "darkweb": [
+            "DPDP Act 2023 — Data fiduciary obligations",
+            "CERT-In Guidelines — Mandatory incident reporting",
+        ],
+        "cloud": [
+            "DPDP Act 2023 — Cross-border data transfer restrictions",
+        ],
+        "email": [],
+        "network": [],
+        "website": [],
+        "devices": [],
+    },
+    "UAE": {
+        "microsoft365": [
+            "UAE PDPL 2021 — Article 10: Data security obligations",
+            "DIFC Data Protection Law — Controller obligations",
+        ],
+        "darkweb": [
+            "UAE PDPL 2021 — Article 12: Breach notification",
+        ],
+        "cloud": [
+            "UAE PDPL 2021 — Article 22: Cross-border data transfers",
+        ],
+        "email": [],
+        "network": [],
+        "website": [],
+        "devices": [],
+    },
+}
+
 SEVERITY_URGENCY = {
     "critical": "Immediate action required — regulatory breach confirmed",
     "moderate": "Action required within 30 days — regulatory risk identified",
     "low": "Action recommended — potential regulatory exposure"
 }
 
-def get_regulatory_mapping(engine: str) -> dict:
-    return REGULATORY_MAPPINGS.get(engine, {
+
+def get_regulatory_mapping(engine: str, country: str = "NZ") -> dict:
+    base = REGULATORY_MAPPINGS.get(engine, {
         "regulations": [],
         "plain_english": "This finding may have regulatory implications. Please review with your compliance advisor."
     })
+    country_regs = _COUNTRY_OVERRIDES.get(country.upper(), {}).get(engine, [])
+    if not country_regs:
+        return base
+    return {
+        "regulations": list(dict.fromkeys(country_regs + base["regulations"])),
+        "plain_english": base["plain_english"],
+    }
+
 
 def get_urgency(severity: str) -> str:
     return SEVERITY_URGENCY.get(severity, "Review recommended")
 
 
-# Generate a full compliance gap report for a scan
-def generate_compliance_report(tenant_id: str, scan_id: str, findings: list) -> dict:
-    breached_regulations = set()
+def generate_compliance_report(tenant_id: str, scan_id: str, findings: list, country: str = "NZ") -> dict:
+    breached_regulations: set = set()
     compliance_gaps = []
 
     for finding in findings:
         engine = finding.get("engine", "")
         severity = finding.get("severity", "low")
-        mapping = get_regulatory_mapping(engine)
+        mapping = get_regulatory_mapping(engine, country)
 
         if mapping["regulations"] and finding.get("score_impact", 0) > 0:
             for reg in mapping["regulations"]:
@@ -114,7 +176,7 @@ def get_frameworks_affected(regulations: set) -> list:
         frameworks.append("NZ Privacy Act 2020")
     if "AU Privacy Act" in reg_text:
         frameworks.append("AU Privacy Act 1988")
-    if "Essential Eight" in reg_text:
+    if "Essential Eight" in reg_text or "ASD Essential Eight" in reg_text:
         frameworks.append("AU Essential Eight (ACSC)")
     if "NCSC" in reg_text:
         frameworks.append("NZ NCSC Guidelines")
@@ -124,5 +186,13 @@ def get_frameworks_affected(regulations: set) -> list:
         frameworks.append("AU Corporations Act 2001")
     if "ISO 27001" in reg_text:
         frameworks.append("ISO 27001")
+    if "DPDP" in reg_text:
+        frameworks.append("India DPDP Act 2023")
+    if "CERT-In" in reg_text:
+        frameworks.append("CERT-In Guidelines")
+    if "UAE PDPL" in reg_text:
+        frameworks.append("UAE PDPL 2021")
+    if "DIFC" in reg_text:
+        frameworks.append("DIFC Data Protection Law")
 
     return frameworks

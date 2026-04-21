@@ -120,7 +120,7 @@ async def get_tenant_me(tenant=Depends(get_current_tenant)):
         tenant_id = tenant["tenant_id"]
 
         result = supabase_admin.table("tenants")\
-            .select("id, name, director_email, logo_url")\
+            .select("id, name, country, director_email, logo_url, compliance_frameworks")\
             .eq("id", tenant_id)\
             .single()\
             .execute()
@@ -136,6 +136,7 @@ async def get_tenant_me(tenant=Depends(get_current_tenant)):
 
 class TenantUpdateRequest(BaseModel):
     director_email: Optional[str] = None
+    compliance_frameworks: Optional[list] = None
 
 @router.patch("/me")
 async def update_tenant_me(
@@ -148,6 +149,8 @@ async def update_tenant_me(
         updates = {}
         if body.director_email is not None:
             updates["director_email"] = body.director_email if body.director_email.strip() != "" else None
+        if body.compliance_frameworks is not None:
+            updates["compliance_frameworks"] = body.compliance_frameworks
 
         if not updates:
             raise HTTPException(status_code=400, detail="Nothing to update.")

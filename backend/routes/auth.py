@@ -560,6 +560,34 @@ def admin_create_account(data: CreateAccountRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# --- RE-AUTHENTICATE (for sensitive data reveal) ------------------------
+
+class ReauthRequest(BaseModel):
+    password: str
+
+@router.post("/reauth")
+def reauth(data: ReauthRequest, authorization: str = Header(...)):
+    """Verify the caller's password before revealing sensitive finding metadata."""
+    try:
+        token = authorization.replace("Bearer ", "")
+        user_obj = supabase_admin.auth.get_user(token)
+        if not user_obj or not user_obj.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        auth_user = supabase_admin.auth.admin.get_user_by_id(user_obj.user.id)
+        if not auth_user or not auth_user.user:
+            raise HTTPException(status_code=401, detail="Could not resolve user")
+
+        email = auth_user.user.email
+        supabase.auth.sign_in_with_password({"email": email, "password": data.password})
+        return {"verified": True}
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Incorrect password")
+
+
 # --- VERIFY EMAIL CALLBACK ----------------------------------------------
 
 @router.post("/verify-email")

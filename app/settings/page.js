@@ -10,6 +10,23 @@ import { authFetch, requireAuth, getToken } from "../../lib/auth";
 
 const TRIAL_DAYS = 7;
 
+const COUNTRY_DEFAULT_FRAMEWORKS = {
+  NZ: ["NZ Privacy Act 2020", "ISO 27001", "ASD Essential Eight"],
+  AU: ["Australian Privacy Act 1988", "ISO 27001", "ASD Essential Eight"],
+  IN: ["DPDP Act 2023", "RBI Guidelines", "CERT-In", "ISO 27001"],
+  UAE: ["UAE PDPL 2021", "DIFC Data Protection Law", "ADGM", "ISO 27001"],
+  AE:  ["UAE PDPL 2021", "DIFC Data Protection Law", "ADGM", "ISO 27001"],
+};
+
+const OPTIONAL_FRAMEWORKS = [
+  { id: "GDPR",    label: "GDPR (EU)",            desc: "EU General Data Protection Regulation" },
+  { id: "HIPAA",   label: "HIPAA (US Healthcare)", desc: "Health Insurance Portability and Accountability Act" },
+  { id: "PCI-DSS", label: "PCI-DSS (Payment Card)", desc: "Payment Card Industry Data Security Standard" },
+  { id: "SOC 2",   label: "SOC 2",                 desc: "Service Organization Control 2" },
+  { id: "NIST CSF",label: "NIST CSF",              desc: "NIST Cybersecurity Framework" },
+  { id: "ISO 27001",label: "ISO 27001",            desc: "International Information Security Standard" },
+];
+
 const AZURE_SCOPES = [
   "User.Read.All",
   "UserAuthenticationMethod.Read.All",
@@ -61,6 +78,11 @@ export default function SettingsPage() {
   const [directorEmail, setDirectorEmail] = useState("");
   const [directorEmailSaving, setDirectorEmailSaving] = useState(false);
 
+  // Compliance frameworks
+  const [tenantCountry, setTenantCountry] = useState("NZ");
+  const [selectedFrameworks, setSelectedFrameworks] = useState([]);
+  const [frameworksSaving, setFrameworksSaving] = useState(false);
+
   useEffect(() => {
     if (!requireAuth(router)) return;
     setCompanyName(localStorage.getItem("company_name") || "");
@@ -93,6 +115,8 @@ export default function SettingsPage() {
       if (tenantRes) {
         const tenantData = await tenantRes.json().catch(() => ({}));
         setDirectorEmail(tenantData.director_email || "");
+        setTenantCountry(tenantData.country || "NZ");
+        setSelectedFrameworks(tenantData.compliance_frameworks || []);
       }
       if (intRes) {
         const intData = await intRes.json().catch(() => ({}));
@@ -148,6 +172,32 @@ export default function SettingsPage() {
     } finally {
       setMs365Scanning(false);
     }
+  }
+
+  async function handleSaveFrameworks(newSelected) {
+    setFrameworksSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await authFetch("/tenants/me", {
+        method: "PATCH",
+        body: JSON.stringify({ compliance_frameworks: newSelected }),
+      });
+      if (!res.ok) { const d = await res.json(); setError(d.detail || "Could not save."); return; }
+      setSelectedFrameworks(newSelected);
+      setSuccess("Compliance frameworks saved.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setFrameworksSaving(false);
+    }
+  }
+
+  function toggleFramework(id) {
+    const next = selectedFrameworks.includes(id)
+      ? selectedFrameworks.filter((f) => f !== id)
+      : [...selectedFrameworks, id];
+    handleSaveFrameworks(next);
   }
 
   async function handleSaveDirectorEmail() {
@@ -409,6 +459,56 @@ export default function SettingsPage() {
                       </button>
                     )}
                   </div>
+                </div>
+
+                {/* Compliance Frameworks card */}
+                <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+                  <h3 className="text-white font-medium mb-1">Compliance Frameworks</h3>
+                  <p className="text-gray-400 text-sm mb-5">
+                    Your country defaults are applied automatically. Tick any additional frameworks your business must comply with — they will appear in your scan findings and compliance scores.
+                  </p>
+
+                  {/* Country defaults — read-only */}
+                  <div className="mb-5">
+                    <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Included by default ({tenantCountry})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(COUNTRY_DEFAULT_FRAMEWORKS[tenantCountry] || COUNTRY_DEFAULT_FRAMEWORKS["NZ"]).map((fw) => (
+                        <span key={fw} className="text-xs px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400">
+                          {fw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Optional frameworks — selectable */}
+                  <div>
+                    <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Additional frameworks</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {OPTIONAL_FRAMEWORKS.filter((f) => {
+                        const defaults = COUNTRY_DEFAULT_FRAMEWORKS[tenantCountry] || COUNTRY_DEFAULT_FRAMEWORKS["NZ"];
+                        return !defaults.includes(f.id);
+                      }).map((fw) => {
+                        const checked = selectedFrameworks.includes(fw.id);
+                        return (
+                          <label key={fw.id} className={`flex items-start gap-3 rounded-xl p-3 border cursor-pointer transition-colors ${
+                            checked ? "bg-red-900/20 border-red-800" : "bg-gray-800 border-gray-700 hover:border-gray-600"
+                          } ${frameworksSaving ? "opacity-50 cursor-not-allowed" : ""}`}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => !frameworksSaving && toggleFramework(fw.id)}
+                              className="mt-0.5 flex-shrink-0 accent-red-500 w-4 h-4"
+                            />
+                            <div>
+                              <p className="text-white text-sm font-medium">{fw.label}</p>
+                              <p className="text-gray-500 text-xs mt-0.5">{fw.desc}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {frameworksSaving && <p className="text-gray-500 text-xs mt-3">Saving...</p>}
                 </div>
 
                 {/* Director email card */}

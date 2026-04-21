@@ -237,7 +237,17 @@ def get_penalty_info(findings: list, country: str) -> dict:
             }
 
 
-def calculate_compliance_scores(findings: list, country: str) -> dict:
+_ALL_ENGINES = ["darkweb", "email", "network", "website", "devices", "cloud", "microsoft365"]
+_EXTRA_FRAMEWORK_KEYS = {
+    "GDPR": "gdpr",
+    "HIPAA": "hipaa",
+    "PCI-DSS": "pci_dss",
+    "SOC 2": "soc2",
+    "NIST CSF": "nist_csf",
+}
+
+
+def calculate_compliance_scores(findings: list, country: str, extra_frameworks: list = None) -> dict:
     def score_for_engines(engines: list) -> int:
         score = 100
         for f in findings:
@@ -251,35 +261,44 @@ def calculate_compliance_scores(findings: list, country: str) -> dict:
         return max(0, min(100, score))
 
     if country == "AU":
-        return {
-            "au_privacy": score_for_engines(["darkweb", "email", "cloud", "website"]),
-            "au_privacy_amendment": score_for_engines(["darkweb", "cloud", "email"]),
-            "au_corporations": score_for_engines(["darkweb", "network", "devices", "email", "website", "cloud"]),
-            "au_cyber_security_act": score_for_engines(["network", "devices", "cloud"]),
-            "essential_eight": score_for_engines(["email", "devices", "network", "website"]),
-            "iso_27001": score_for_engines(["darkweb", "email", "network", "website", "devices", "cloud"]),
+        base = {
+            "au_privacy": score_for_engines(["darkweb", "email", "cloud", "website", "microsoft365"]),
+            "au_privacy_amendment": score_for_engines(["darkweb", "cloud", "email", "microsoft365"]),
+            "au_corporations": score_for_engines(["darkweb", "network", "devices", "email", "website", "cloud", "microsoft365"]),
+            "au_cyber_security_act": score_for_engines(["network", "devices", "cloud", "microsoft365"]),
+            "essential_eight": score_for_engines(["email", "devices", "network", "website", "microsoft365"]),
+            "iso_27001": score_for_engines(_ALL_ENGINES),
         }
-    elif country == "UAE":
-        return {
-            "uae_pdpl": score_for_engines(["darkweb", "email", "cloud", "website"]),
-            "uae_nesa": score_for_engines(["network", "devices", "cloud"]),
-            "iso_27001": score_for_engines(["darkweb", "email", "network", "website", "devices", "cloud"]),
+    elif country in ("UAE", "AE"):
+        base = {
+            "uae_pdpl": score_for_engines(["darkweb", "email", "cloud", "website", "microsoft365"]),
+            "uae_nesa": score_for_engines(["network", "devices", "cloud", "microsoft365"]),
+            "iso_27001": score_for_engines(_ALL_ENGINES),
         }
     elif country == "IN":
-        return {
-            "india_dpdp": score_for_engines(["darkweb", "email", "cloud", "website"]),
-            "cert_in": score_for_engines(["network", "devices", "cloud"]),
-            "iso_27001": score_for_engines(["darkweb", "email", "network", "website", "devices", "cloud"]),
+        base = {
+            "india_dpdp": score_for_engines(["darkweb", "email", "cloud", "website", "microsoft365"]),
+            "cert_in": score_for_engines(["network", "devices", "cloud", "microsoft365"]),
+            "iso_27001": score_for_engines(_ALL_ENGINES),
         }
     else:
-        return {
-            "nz_privacy": score_for_engines(["darkweb", "email", "cloud", "website"]),
-            "nz_privacy_amendment": score_for_engines(["darkweb", "cloud"]),
-            "nz_companies": score_for_engines(["darkweb", "network", "devices", "email", "website", "cloud"]),
-            "nz_ncsc": score_for_engines(["email", "network", "website"]),
-            "essential_eight": score_for_engines(["email", "devices", "network", "website"]),
-            "iso_27001": score_for_engines(["darkweb", "email", "network", "website", "devices", "cloud"]),
+        base = {
+            "nz_privacy": score_for_engines(["darkweb", "email", "cloud", "website", "microsoft365"]),
+            "nz_privacy_amendment": score_for_engines(["darkweb", "cloud", "microsoft365"]),
+            "nz_companies": score_for_engines(["darkweb", "network", "devices", "email", "website", "cloud", "microsoft365"]),
+            "nz_ncsc": score_for_engines(["email", "network", "website", "microsoft365"]),
+            "essential_eight": score_for_engines(["email", "devices", "network", "website", "microsoft365"]),
+            "iso_27001": score_for_engines(_ALL_ENGINES),
         }
+
+    # Additional user-selected frameworks — all engines contribute
+    extra = {}
+    for fw in (extra_frameworks or []):
+        key = _EXTRA_FRAMEWORK_KEYS.get(fw)
+        if key and key not in base:
+            extra[key] = score_for_engines(_ALL_ENGINES)
+
+    return {**base, **extra, "selected_extra_frameworks": extra_frameworks or []}
 
 
 @router.get("/")
@@ -299,10 +318,11 @@ def get_dashboard(authorization: str = Header(...)):
         tenant_id = tenant_user.data["tenant_id"]
         company_name = tenant_user.data["tenants"]["name"]
         plan = tenant_user.data["tenants"].get("plan")
-        country = tenant_user.data["tenants"].get("country", "NZ")
+        country = tenant_user.data["tenants"].get("country", "NZ") or "NZ"
         logo_url = tenant_user.data["tenants"].get("logo_url")
         status = tenant_user.data["tenants"].get("status", "trial")
         trial_ends_at = tenant_user.data["tenants"].get("trial_ends_at")
+        extra_frameworks = tenant_user.data["tenants"].get("compliance_frameworks") or []
 
         findings = supabase_admin.table("findings")\
             .select("*")\
@@ -327,7 +347,7 @@ def get_dashboard(authorization: str = Header(...)):
 
         ransom_score = calculate_ransom_score(findings.data)
         governance_score = calculate_governance_score(findings.data)
-        compliance = calculate_compliance_scores(findings.data, country)
+        compliance = calculate_compliance_scores(findings.data, country, extra_frameworks)
         penalty_info = get_penalty_info(findings.data, country)
 
         critical = [f for f in findings.data if f["severity"] == "critical"]
