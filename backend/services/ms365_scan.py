@@ -1,9 +1,14 @@
 import os
+import json
 import httpx
 from datetime import datetime, timezone, timedelta
 from services.database import supabase_admin
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+
+
+def _sanitize_metadata(obj: dict) -> dict:
+    return json.loads(json.dumps(obj, default=str))
 
 
 def _get_frameworks(country: str, extra: list) -> list:
@@ -130,7 +135,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                 "fix_type": "configuration",
                 "score_impact": min(25, n * 3),
                 "status": "open",
-                "metadata": {
+                "metadata": _sanitize_metadata({
                     "affected_users": [
                         {
                             "name": u.get("userDisplayName", "Unknown"),
@@ -140,7 +145,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                         }
                         for u in no_mfa
                     ]
-                },
+                }),
             })
     except Exception as e:
         print(f"[MS365] MFA check failed: {e}")
@@ -175,7 +180,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                 "fix_type": "configuration",
                 "score_impact": min(15, n * 2),
                 "status": "open",
-                "metadata": {
+                "metadata": _sanitize_metadata({
                     "affected_users": [
                         {
                             "name": u.get("displayName", "Unknown"),
@@ -187,7 +192,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                         }
                         for u in inactive
                     ]
-                },
+                }),
             })
     except Exception as e:
         print(f"[MS365] Inactive users check failed: {e}")
@@ -225,7 +230,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                 "fix_type": "configuration",
                 "score_impact": min(15, n * 2),
                 "status": "open",
-                "metadata": {
+                "metadata": _sanitize_metadata({
                     "affected_users": [
                         {
                             "name": info["name"],
@@ -236,7 +241,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                         }
                         for info in admin_map.values()
                     ]
-                },
+                }),
             })
     except Exception as e:
         print(f"[MS365] Admin check failed: {e}")
@@ -282,12 +287,17 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
     except Exception as e:
         print(f"[MS365] External sharing check failed: {e}")
 
-    if findings:
-        supabase_admin.table("findings").insert(findings).execute()
+    inserted = 0
+    for finding in findings:
+        try:
+            supabase_admin.table("findings").insert(finding).execute()
+            inserted += 1
+        except Exception as e:
+            print(f"[MS365] Failed to insert finding '{finding.get('title', '?')}': {e}")
 
     supabase_admin.table("integrations")\
         .update({"last_synced_at": datetime.now(timezone.utc).isoformat()})\
         .eq("id", integration["id"])\
         .execute()
 
-    return {"findings_count": len(findings)}
+    return {"findings_count": inserted}
