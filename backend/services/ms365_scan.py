@@ -130,7 +130,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "do not have multi-factor authentication registered. "
                     "These accounts can be compromised through password spray or phishing alone."
                 ),
-                "governance_gap": True,
+                "governance_gap": "No policy mandates multi-factor authentication for all staff.",
                 "regulations": frameworks,
                 "fix_type": "voice",
                 "score_impact": min(25, n * 3),
@@ -176,7 +176,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     f"{n} user account{'s' if n > 1 else ''} have not signed in for over 90 days. "
                     "Stale accounts expand your attack surface and should be disabled or removed."
                 ),
-                "governance_gap": True,
+                "governance_gap": "No formal offboarding process exists to disable accounts when staff leave.",
                 "regulations": frameworks,
                 "fix_type": "voice",
                 "score_impact": min(15, n * 2),
@@ -227,7 +227,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "Excessive admin accounts amplify the blast radius of any account compromise. "
                     "Best practice is to limit admin access to 2–3 dedicated break-glass accounts."
                 ),
-                "governance_gap": True,
+                "governance_gap": "No formal privileged access management policy exists.",
                 "regulations": frameworks,
                 "fix_type": "voice",
                 "score_impact": min(15, n * 2),
@@ -280,7 +280,7 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
                     "in your SharePoint/OneDrive are shared externally or via anonymous link. "
                     "Uncontrolled external sharing can expose sensitive business data to unauthorised parties."
                 ),
-                "governance_gap": True,
+                "governance_gap": "No policy governs external file sharing in SharePoint or OneDrive.",
                 "regulations": frameworks,
                 "fix_type": "voice",
                 "score_impact": min(20, external_count * 2),
@@ -293,10 +293,25 @@ async def run_ms365_scan(tenant_id: str, scan_id: str) -> dict:
     inserted = 0
     for finding in findings:
         try:
-            supabase_admin.table("findings").insert(finding).execute()
+            existing = supabase_admin.table("findings")\
+                .select("id")\
+                .eq("tenant_id", finding["tenant_id"])\
+                .eq("title", finding["title"])\
+                .limit(1)\
+                .execute()
+
+            if existing.data:
+                existing_id = existing.data[0]["id"]
+                update_payload = {k: v for k, v in finding.items() if k != "tenant_id"}
+                supabase_admin.table("findings")\
+                    .update(update_payload)\
+                    .eq("id", existing_id)\
+                    .execute()
+            else:
+                supabase_admin.table("findings").insert(finding).execute()
             inserted += 1
         except Exception as e:
-            print(f"[MS365] Failed to insert finding '{finding.get('title', '?')}': {e}")
+            print(f"[MS365] Failed to upsert finding '{finding.get('title', '?')}': {e}")
 
     supabase_admin.table("integrations")\
         .update({"last_synced_at": datetime.now(timezone.utc).isoformat()})\
