@@ -132,7 +132,8 @@ async def _check_abuseipdb(domain: str, ips: list, tenant_id: str, scan_id: str,
             f"{n} IP address{'es' if n > 1 else ''} associated with {domain} appear on AbuseIPDB abuse blacklists. "
             "Blacklisted IPs indicate your network may be compromised, used for spam, or associated with malicious activity."
         ),
-        "governance_gap": True, "regulations": frameworks,
+        "governance_gap": "No formal process exists to monitor IP reputation or blocklist status.",
+        "regulations": frameworks,
         "fix_type": "specialist", "score_impact": min(15, n * 5),
         "status": "open",
         "metadata": _sanitize({"flagged_ips": flagged}),
@@ -169,7 +170,8 @@ async def _check_virustotal(domain: str, tenant_id: str, scan_id: str, framework
                 f"and {suspicious} as suspicious. This indicates your domain may be associated with malware, "
                 "phishing, or other malicious activity in industry threat databases."
             ),
-            "governance_gap": True, "regulations": frameworks,
+            "governance_gap": "No formal process exists to monitor domain reputation across threat intelligence databases.",
+            "regulations": frameworks,
             "fix_type": "specialist", "score_impact": min(20, total_bad * 2),
             "status": "open",
             "metadata": _sanitize({"malicious_vendors": malicious, "suspicious_vendors": suspicious, "total_flagged": total_bad}),
@@ -206,7 +208,8 @@ async def _check_urlscan(domain: str, tenant_id: str, scan_id: str, frameworks: 
                 f"URLScan.io has recorded {n} malicious scan result{'s' if n > 1 else ''} involving {domain}. "
                 "This suggests your domain has been observed in phishing pages, malware delivery, or other malicious scans."
             ),
-            "governance_gap": True, "regulations": frameworks,
+            "governance_gap": "No formal process exists to monitor malicious URL activity associated with the domain.",
+            "regulations": frameworks,
             "fix_type": "specialist", "score_impact": min(15, n * 3),
             "status": "open",
             "metadata": _sanitize({"malicious_scan_count": n}),
@@ -252,7 +255,8 @@ async def _check_otx(domain: str, ips: list, tenant_id: str, scan_id: str, frame
                 f"{domain} or its IP addresses. OTX pulses indicate your domain or IPs have been observed in "
                 "active threat campaigns reported by the global security community."
             ),
-            "governance_gap": True, "regulations": frameworks,
+            "governance_gap": "No formal process exists to monitor threat intelligence feeds for domain or IP indicators of compromise.",
+            "regulations": frameworks,
             "fix_type": "specialist", "score_impact": min(15, pulse_count * 2),
             "status": "open",
             "metadata": _sanitize({"pulse_count": pulse_count, "checked_ips": ips[:3]}),
@@ -284,7 +288,8 @@ async def _check_typosquatting(domain: str, tenant_id: str, scan_id: str, framew
             "Typosquatting domains are commonly used to deceive customers, intercept emails, or conduct "
             "phishing attacks that impersonate your business."
         ),
-        "governance_gap": True, "regulations": frameworks,
+        "governance_gap": "No formal process exists to monitor domain impersonation attempts.",
+        "regulations": frameworks,
         "fix_type": "specialist", "score_impact": min(25, n * 5),
         "status": "open",
         "metadata": _sanitize({"registered_typos": registered, "total_checked": len(typos)}),
@@ -326,7 +331,8 @@ async def _check_hibp(domain: str, tenant_id: str, scan_id: str, frameworks: lis
                 f"according to Have I Been Pwned. Affected accounts were found in: {', '.join(unique_breaches[:5])}. "
                 "Breached credentials are actively sold and used for account takeover attacks."
             ),
-            "governance_gap": True, "regulations": frameworks,
+            "governance_gap": "No formal process exists to monitor employee credentials against breach databases.",
+            "regulations": frameworks,
             "fix_type": "specialist", "score_impact": min(25, alias_count * 2),
             "status": "open",
             "metadata": _sanitize({
@@ -391,10 +397,25 @@ async def run_threat_intel_scan(tenant_id: str, scan_id: str) -> dict:
     inserted = 0
     for finding in findings:
         try:
-            supabase_admin.table("findings").insert(finding).execute()
+            existing = supabase_admin.table("findings")\
+                .select("id")\
+                .eq("tenant_id", finding["tenant_id"])\
+                .eq("title", finding["title"])\
+                .limit(1)\
+                .execute()
+
+            if existing.data:
+                existing_id = existing.data[0]["id"]
+                update_payload = {k: v for k, v in finding.items() if k != "tenant_id"}
+                supabase_admin.table("findings")\
+                    .update(update_payload)\
+                    .eq("id", existing_id)\
+                    .execute()
+            else:
+                supabase_admin.table("findings").insert(finding).execute()
             inserted += 1
         except Exception as e:
-            print(f"[ThreatIntel] Failed to insert '{finding.get('title', '?')}': {e}")
+            print(f"[ThreatIntel] Failed to upsert '{finding.get('title', '?')}': {e}")
 
     supabase_admin.table("integrations")\
         .update({"last_synced_at": datetime.now(timezone.utc).isoformat()})\
