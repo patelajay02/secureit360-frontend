@@ -85,7 +85,7 @@ function ReauthModal({ onVerified, onClose }: { onVerified: () => void, onClose:
     setErr('')
     try {
       const token = localStorage.getItem('token') || ''
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/reauth`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ password }),
@@ -797,47 +797,51 @@ export default function DashboardPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
             <h3 className="text-white font-semibold mb-4">Your top security issues</h3>
             <div className="space-y-4">
-              {dashboard.top_findings.map((finding: any, index: number) => (
-                <div key={index} className="border-b border-gray-800 pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-start gap-3">
-                    <span className={`text-xs px-2 py-1 rounded font-medium mt-0.5 flex-shrink-0 ${
-                      finding.severity === 'critical' ? 'bg-red-900/50 text-red-300' :
-                      finding.severity === 'moderate' ? 'bg-orange-900/50 text-orange-300' :
-                      'bg-gray-700 text-gray-300'
-                    }`}>
-                      {finding.severity === 'critical' ? 'Critical' : finding.severity === 'moderate' ? 'Moderate' : 'Low'}
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-white text-sm font-medium">{finding.title}</p>
-                        {isCarriedOver(finding) && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-400 border border-amber-800">Not fixed since last scan</span>
-                        )}
-                      </div>
-                      <p className="text-gray-500 text-xs mt-1">{finding.description?.substring(0, 120)}...</p>
-                      {finding.governance_gap && <p className="text-gray-600 text-xs italic mt-2">{finding.governance_gap}</p>}
-                      {finding.regulations && finding.regulations.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {filterRegulations(finding.regulations, country).map((reg: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">{reg}</span>
-                          ))}
+              {dashboard.top_findings.map((finding: any, index: number) => {
+                const hasMeta = finding.engine === 'microsoft365' && Array.isArray(finding.metadata?.affected_users) && finding.metadata.affected_users.length > 0
+                return (
+                  <div
+                    key={index}
+                    onClick={() => hasMeta && handleViewDetails(finding)}
+                    className={`border-b border-gray-800 pb-4 last:border-0 last:pb-0 rounded-xl transition-colors ${hasMeta ? 'cursor-pointer hover:bg-gray-800/60 -mx-3 px-3 pt-3' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={`text-xs px-2 py-1 rounded font-medium mt-0.5 flex-shrink-0 ${
+                        finding.severity === 'critical' ? 'bg-red-900/50 text-red-300' :
+                        finding.severity === 'moderate' ? 'bg-orange-900/50 text-orange-300' :
+                        'bg-gray-700 text-gray-300'
+                      }`}>
+                        {finding.severity === 'critical' ? 'Critical' : finding.severity === 'moderate' ? 'Moderate' : 'Low'}
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-white text-sm font-medium">{finding.title}</p>
+                          {isCarriedOver(finding) && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-400 border border-amber-800">Not fixed since last scan</span>
+                          )}
+                          {hasMeta && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400 border border-blue-800/60">
+                              🔒 Click to view affected users
+                            </span>
+                          )}
                         </div>
-                      )}
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        {getFixButton(finding.fix_type, finding)}
-                        {finding.engine === 'microsoft365' && finding.metadata?.affected_users?.length > 0 && (
-                          <button
-                            onClick={() => handleViewDetails(finding)}
-                            className="text-xs px-2 py-1 rounded font-medium bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-800"
-                          >
-                            View affected users
-                          </button>
+                        <p className="text-gray-500 text-xs mt-1">{finding.description?.substring(0, 120)}...</p>
+                        {finding.governance_gap && <p className="text-gray-600 text-xs italic mt-2">{finding.governance_gap}</p>}
+                        {finding.regulations && finding.regulations.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {filterRegulations(finding.regulations, country).map((reg: string, i: number) => (
+                              <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">{reg}</span>
+                            ))}
+                          </div>
                         )}
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          {getFixButton(finding.fix_type, finding)}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <div className="mt-6 pt-4 border-t border-gray-800">
               <p className="text-gray-500 text-xs">

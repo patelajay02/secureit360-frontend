@@ -565,8 +565,8 @@ def admin_create_account(data: CreateAccountRequest):
 class ReauthRequest(BaseModel):
     password: str
 
-@router.post("/reauth")
-def reauth(data: ReauthRequest, authorization: str = Header(...)):
+@router.post("/verify-password")
+def verify_password(data: ReauthRequest, authorization: str = Header(...)):
     """Verify the caller's password before revealing sensitive finding metadata."""
     try:
         token = authorization.replace("Bearer ", "")
