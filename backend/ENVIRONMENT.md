@@ -36,3 +36,13 @@ Set these in Railway for the FastAPI service. Local dev reads them from
   → 32 base64url characters). Never commit or log this value. Rotating it
   requires re-encrypting every existing row — plan a migration before
   rotating.
+- `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET` — OAuth 2.0 (PKCE) credentials
+  for the Xero Tier-1 connector. Redirect URI to register in the Xero
+  developer portal:
+  `https://secureit360-production.up.railway.app/saas/callback/xero`.
+- `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET` — OAuth 2.0 credentials for the
+  Zoho Tier-1 connector. Redirect URI to register in the Zoho API
+  console (under the "Server-based Applications" client type):
+  `https://secureit360-production.up.railway.app/saas/callback/zoho`.
+  Zoho auto-detects the user's data centre on redirect — no separate
+  per-region client id is required.

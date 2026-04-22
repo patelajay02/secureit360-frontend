@@ -20,29 +20,29 @@ from services.database import supabase_admin
 from .credential_vault import load_credentials
 from .generic_checks import CHECK_REGISTRY
 from .governance_mapper import map_to_governance
+from .providers import PROVIDER_REGISTRY
 
 
-# ── Adapter placeholder ─────────────────────────────────────────────────────
-# Real per-SaaS adapters land in Step 3. Each adapter accepts the
-# decrypted credentials dict and a list of capability keys, and returns
-# a payload dict keyed by the capability it satisfies, e.g.:
-#     {"admin_ratio": <users list>, "mfa_coverage": <users list>,
-#      "public_sharing": <shares list>, "audit_log_enabled": <config dict>}
+# ── Provider dispatch ───────────────────────────────────────────────────────
+# Concrete providers live in saas_connectors/providers/ and register
+# themselves via @register_provider("slug"). If a slug isn't registered
+# we return an empty payload dict — the scan will complete with zero
+# findings rather than erroring the caller.
 
-def _placeholder_adapter(
-    app_slug: str,  # noqa: ARG001 — used by real adapters
-    credentials: dict[str, Any],  # noqa: ARG001
-    capabilities: list[str],  # noqa: ARG001
+def _fetch_payloads(
+    app_slug: str,
+    credentials: dict[str, Any],
+    capabilities: list[str],
 ) -> dict[str, Any]:
-    """Stub adapter. Real implementations land in Step 3."""
-    return {}
-
-
-ADAPTERS: dict[str, Any] = {}
-
-
-def _get_adapter(app_slug: str):
-    return ADAPTERS.get(app_slug, _placeholder_adapter)
+    provider_cls = PROVIDER_REGISTRY.get(app_slug)
+    if not provider_cls:
+        return {}
+    try:
+        provider = provider_cls()
+        return provider.fetch_payloads(credentials, capabilities) or {}
+    except Exception as e:
+        print(f"[SaaS scan] provider '{app_slug}' fetch_payloads failed: {e}")
+        return {}
 
 
 # ── User country lookup ─────────────────────────────────────────────────────
@@ -104,8 +104,7 @@ def run_scan(connection_id: str) -> dict[str, Any]:
         if isinstance(caps, list):
             capabilities = [str(c) for c in caps]
 
-    adapter = _get_adapter(app_slug)
-    payloads = adapter(app_slug, credentials, capabilities) or {}
+    payloads = _fetch_payloads(app_slug, credentials, capabilities)
 
     country = _user_country(user_id)
 
