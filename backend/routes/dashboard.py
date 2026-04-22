@@ -376,9 +376,10 @@ def get_dashboard(authorization: str = Header(...)):
         compliance = calculate_compliance_scores(findings.data, country, extra_frameworks)
         penalty_info = get_penalty_info(findings.data, country)
 
-        critical = [f for f in findings.data if f["severity"] == "critical"]
-        moderate = [f for f in findings.data if f["severity"] == "moderate"]
-        low = [f for f in findings.data if f["severity"] == "low"]
+        real_findings = [f for f in findings.data if f.get("fix_type") != "info"]
+        critical = [f for f in real_findings if f["severity"] == "critical"]
+        moderate = [f for f in real_findings if f["severity"] == "moderate"]
+        low = [f for f in real_findings if f["severity"] == "low"]
 
         return {
             "company_name": company_name,
@@ -394,7 +395,7 @@ def get_dashboard(authorization: str = Header(...)):
                 "critical": len(critical),
                 "moderate": len(moderate),
                 "low": len(low),
-                "total": len(findings.data)
+                "total": len(real_findings)
             },
             "top_findings": findings.data[:5],
             "compliance": compliance,

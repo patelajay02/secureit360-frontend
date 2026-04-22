@@ -669,6 +669,7 @@ export default function DashboardPage() {
   }
 
   const isCarriedOver = (finding: any) => {
+    if (finding.fix_type === 'info') return false
     if (!finding.updated_at || !finding.created_at) return false
     const created = new Date(finding.created_at).getTime()
     const updated = new Date(finding.updated_at).getTime()
