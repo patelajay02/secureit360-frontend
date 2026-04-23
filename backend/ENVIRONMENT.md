@@ -30,6 +30,15 @@ Set these in Railway for the FastAPI service. Local dev reads them from
 - `HIBP_API_KEY`
 - `SHODAN_API_KEY`
 
+## AI recipe generator
+
+- `ANTHROPIC_API_KEY` — Claude API key used by
+  `backend/saas_connectors/ai_recipe_generator.py` when a director
+  searches the catalog for an app that isn't in the registry yet.
+  We call `claude-sonnet-4-20250514` via the REST API (no SDK) with a
+  strict JSON-only system prompt. Obtain from
+  <https://console.anthropic.com/>. Never commit.
+
 ## Universal SaaS Connector
 
 - `SAAS_VAULT_KEY` — 32-character random secret used as the passphrase for

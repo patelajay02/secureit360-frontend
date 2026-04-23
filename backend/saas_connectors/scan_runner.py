@@ -145,6 +145,18 @@ def run_scan(connection_id: str) -> dict[str, Any]:
         "last_scan_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", connection_id).execute()
 
+    # Self-improving catalog: an AI-generated Tier-2 recipe that just
+    # scanned successfully graduates to verified. "Success" = run_scan
+    # reached this point without raising; zero findings still counts.
+    try:
+        supabase_admin.table("saas_app_registry")\
+            .update({"verified": True})\
+            .eq("slug", app_slug)\
+            .eq("verified", False)\
+            .execute()
+    except Exception as e:
+        print(f"[SaaS scan] registry auto-verify failed for {app_slug}: {e}")
+
     return {
         "connection_id": connection_id,
         "findings_count": inserted,

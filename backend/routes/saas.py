@@ -25,6 +25,7 @@ from pydantic import BaseModel
 
 from services.auto_fix import run_saas_fix
 from services.database import supabase_admin
+from saas_connectors.ai_recipe_generator import generate_recipe
 from saas_connectors.credential_vault import store_credentials
 from saas_connectors.providers import PROVIDER_REGISTRY
 from saas_connectors.scan_runner import run_scan
@@ -191,6 +192,10 @@ class ManualConnectRequest(BaseModel):
     credentials: dict[str, Any]
 
 
+class GenerateRecipeRequest(BaseModel):
+    app_name: str
+
+
 @router.post("/connect/manual/{app_slug}")
 def manual_connect(
     app_slug: str,
@@ -215,6 +220,34 @@ def manual_connect(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"connection_id": connection_id, "app_slug": app_slug, "app_name": entry["name"]}
+
+
+# ── AI-generated wizard recipe ──────────────────────────────────────────────
+# The catalog page calls this when the director searches for an app that
+# isn't in the registry. generate_recipe() validates Claude's output
+# strictly — broken JSON short-circuits to a friendly 422 rather than
+# caching garbage that every subsequent user would inherit.
+
+@router.post("/generate-recipe")
+def generate_recipe_endpoint(
+    data: GenerateRecipeRequest,
+    authorization: str = Header(...),
+):
+    _get_user_id(authorization)
+    app_name = (data.app_name or "").strip()
+    if not app_name:
+        raise HTTPException(status_code=400, detail="app_name is required")
+
+    row = generate_recipe(app_name)
+    if not row:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"We couldn't auto-generate a guide for {app_name} — please "
+                "email governance@secureit360.co and we'll add it for you."
+            ),
+        )
+    return row
 
 
 # ── Scan trigger ────────────────────────────────────────────────────────────

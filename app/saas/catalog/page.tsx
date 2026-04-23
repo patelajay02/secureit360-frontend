@@ -21,7 +21,8 @@ function CatalogInner() {
   const [loading, setLoading] = useState(true);
   const [wizardApp, setWizardApp] = useState<RegistryApp | null>(null);
   const [wizardSubmitting, setWizardSubmitting] = useState(false);
-  const [requestOpen, setRequestOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -79,6 +80,41 @@ function CatalogInner() {
     }
   };
 
+  const handleGenerate = async (appName: string) => {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const resp = await authFetch(`/saas/generate-recipe`, {
+        method: "POST",
+        body: JSON.stringify({ app_name: appName }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(
+          data.detail ||
+            `We couldn't auto-generate a guide for ${appName}. Please email governance@secureit360.co.`
+        );
+      }
+      // `data` is the saved saas_app_registry row. Drop it into wizard
+      // state directly and drop it into our local catalog too.
+      setApps((prev) => {
+        const existing = prev.some((a) => a.slug === data.slug);
+        return existing
+          ? prev.map((a) => (a.slug === data.slug ? data : a))
+          : [...prev, data];
+      });
+      if (data.wizard_recipe) {
+        setWizardApp(data as RegistryApp);
+      } else {
+        throw new Error("The generated guide was empty. Please try again.");
+      }
+    } catch (e: any) {
+      setGenerateError(e?.message || "Something went wrong. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleWizardSubmit = async (values: Record<string, string>) => {
     if (!wizardApp) return;
     setWizardSubmitting(true);
@@ -119,12 +155,29 @@ function CatalogInner() {
           </div>
 
           {wizardApp ? (
-            <GuidedWizard
-              recipe={wizardApp.wizard_recipe as WizardRecipe}
-              onCancel={() => setWizardApp(null)}
-              onSubmit={handleWizardSubmit}
-              submitting={wizardSubmitting}
-            />
+            <>
+              {wizardApp.verified === false && (
+                <div className="mb-4 rounded-xl border border-amber-900/60 bg-amber-900/20 px-4 py-3 text-amber-100 text-sm">
+                  <span className="font-semibold">This setup guide is in beta</span>
+                  {" — let us know if any steps don't match what you see in "}
+                  <span className="text-amber-200 font-medium">{wizardApp.name}</span>
+                  {". Email feedback to "}
+                  <a
+                    href="mailto:governance@secureit360.co"
+                    className="underline hover:text-white"
+                  >
+                    governance@secureit360.co
+                  </a>
+                  .
+                </div>
+              )}
+              <GuidedWizard
+                recipe={wizardApp.wizard_recipe as WizardRecipe}
+                onCancel={() => setWizardApp(null)}
+                onSubmit={handleWizardSubmit}
+                submitting={wizardSubmitting}
+              />
+            </>
           ) : loading ? (
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
               <p className="text-gray-400 text-sm">Loading the catalog…</p>
@@ -133,29 +186,10 @@ function CatalogInner() {
             <AppCatalog
               apps={apps}
               onConnect={handleConnect}
-              onRequestNewApp={() => setRequestOpen(true)}
+              onGenerate={handleGenerate}
+              generating={generating}
+              generateError={generateError}
             />
-          )}
-
-          {requestOpen && (
-            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-md w-full">
-                <h3 className="text-white font-semibold mb-2">
-                  Add a tool manually
-                </h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Coming soon — Step 5 unlocks this. You&apos;ll be able to type
-                  the name of any business tool and we&apos;ll build a guided
-                  connection for you on the spot.
-                </p>
-                <button
-                  onClick={() => setRequestOpen(false)}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm"
-                >
-                  Got it
-                </button>
-              </div>
-            </div>
           )}
         </div>
     </main>

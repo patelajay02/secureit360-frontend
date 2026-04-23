@@ -14,7 +14,9 @@ export type RegistryApp = {
 type Props = {
   apps: RegistryApp[];
   onConnect: (app: RegistryApp) => void;
-  onRequestNewApp: () => void;
+  onGenerate: (appName: string) => void | Promise<void>;
+  generating?: boolean;
+  generateError?: string | null;
 };
 
 function TierBadge({ tier }: { tier: string }) {
@@ -47,7 +49,13 @@ function Initials({ name }: { name: string }) {
   );
 }
 
-export default function AppCatalog({ apps, onConnect, onRequestNewApp }: Props) {
+export default function AppCatalog({
+  apps,
+  onConnect,
+  onGenerate,
+  generating,
+  generateError,
+}: Props) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -59,6 +67,9 @@ export default function AppCatalog({ apps, onConnect, onRequestNewApp }: Props) 
     );
   }, [apps, query]);
 
+  const trimmedQuery = query.trim();
+  const showGenerate = trimmedQuery.length > 0 && filtered.length === 0;
+
   return (
     <div className="space-y-6">
       <input
@@ -69,15 +80,28 @@ export default function AppCatalog({ apps, onConnect, onRequestNewApp }: Props) 
         className="w-full bg-gray-900 border border-gray-800 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
       />
 
-      {filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
-          <p className="text-white font-medium mb-1">
-            We don&apos;t have <span className="text-indigo-400">{query}</span>{" "}
-            in the catalog yet.
+      {showGenerate ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8">
+          <p className="text-white font-semibold text-lg">
+            Don&apos;t see{" "}
+            <span className="text-indigo-400">{trimmedQuery}</span>?
           </p>
-          <p className="text-gray-400 text-sm mb-4">
-            You can still add it manually below.
+          <p className="text-gray-400 text-sm mt-2 mb-5">
+            We can build a setup guide for {trimmedQuery} right now using AI.
+            It takes about 10 seconds.
           </p>
+          <button
+            onClick={() => onGenerate(trimmedQuery)}
+            disabled={generating}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 text-white font-semibold text-sm px-5 py-2.5 rounded-lg"
+          >
+            {generating ? "Generating your setup guide…" : "Generate setup guide"}
+          </button>
+          {generateError && (
+            <p className="text-red-400 text-sm mt-4" role="alert">
+              {generateError}
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -116,21 +140,6 @@ export default function AppCatalog({ apps, onConnect, onRequestNewApp }: Props) 
           ))}
         </div>
       )}
-
-      <div className="bg-gray-900 border border-dashed border-gray-700 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <p className="text-white font-semibold">Can&apos;t find your tool?</p>
-          <p className="text-gray-400 text-sm mt-1">
-            Add it manually and we&apos;ll build a connection for you.
-          </p>
-        </div>
-        <button
-          onClick={onRequestNewApp}
-          className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg"
-        >
-          Add it manually
-        </button>
-      </div>
     </div>
   );
 }
