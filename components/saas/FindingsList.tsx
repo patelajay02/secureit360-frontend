@@ -1,5 +1,6 @@
 "use client";
 
+import FindingActions from "./FindingActions";
 import SeverityBadge from "./SeverityBadge";
 
 type Finding = {
@@ -101,6 +102,7 @@ export default function FindingsList({ findings }: { findings: Finding[] }) {
                       ))}
                     </div>
                   )}
+                  <FindingActions finding={f} />
                 </div>
               ))}
             </div>

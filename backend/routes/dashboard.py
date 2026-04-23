@@ -7,6 +7,81 @@ from services.database import supabase, supabase_admin
 
 router = APIRouter()
 
+
+# ── SaaS connector score integration ────────────────────────────────────────
+# The six domain-scan engines write to the `findings` table; the SaaS
+# connector (Xero/Zoho/etc.) writes to `saas_findings`. The dashboard
+# scores have to reflect both surfaces, so we pull SaaS findings for the
+# caller's user_id and fold severity-weighted deltas into each score.
+
+SAAS_SEVERITY_WEIGHT = {"critical": 15, "high": 10, "medium": 5, "low": 2}
+# Only user-level SaaS checks that materially raise ransomware risk
+# should shift the Ransom Risk Score. Data/sharing checks are governance.
+SAAS_RANSOM_CHECKS = {"mfa_coverage", "dormant_users"}
+
+
+def _fetch_saas_findings_for_user(user_id: str) -> list:
+    """Return every saas_findings row belonging to the user's connections."""
+    try:
+        conns = (
+            supabase_admin.table("saas_connections")
+            .select("id")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        conn_ids = [c["id"] for c in (conns.data or [])]
+        if not conn_ids:
+            return []
+        r = (
+            supabase_admin.table("saas_findings")
+            .select("check_id, severity, created_at")
+            .in_("connection_id", conn_ids)
+            .execute()
+        )
+        return r.data or []
+    except Exception:
+        return []
+
+
+def _saas_ransom_delta(saas_findings: list) -> int:
+    return sum(
+        SAAS_SEVERITY_WEIGHT.get(f.get("severity"), 0)
+        for f in saas_findings
+        if f.get("check_id") in SAAS_RANSOM_CHECKS
+    )
+
+
+def _saas_governance_delta(saas_findings: list) -> int:
+    return sum(
+        SAAS_SEVERITY_WEIGHT.get(f.get("severity"), 0)
+        for f in saas_findings
+    )
+
+
+def _saas_director_delta(saas_findings: list) -> int:
+    return sum(
+        SAAS_SEVERITY_WEIGHT.get(f.get("severity"), 0)
+        for f in saas_findings
+    )
+
+
+def _saas_penalty_proxy(saas_findings: list) -> list:
+    """Map SaaS findings onto the legacy severity vocabulary used by
+    get_penalty_info (which only understands 'critical' / 'moderate' /
+    'low'). Ensures a critical SaaS finding drives the director personal
+    liability rating up to High in the "If attacked today" panel."""
+    proxy = []
+    for f in saas_findings:
+        sev = f.get("severity")
+        if sev == "critical":
+            mapped = "critical"
+        elif sev in ("high", "medium"):
+            mapped = "moderate"
+        else:
+            mapped = "low"
+        proxy.append({"severity": mapped})
+    return proxy
+
 DISCLAIMER = (
     "The information on this dashboard is for awareness purposes only and does not "
     "constitute legal advice. Penalty figures are indicative maximums based on current "
@@ -356,7 +431,9 @@ def get_dashboard(authorization: str = Header(...)):
             .order("score_impact", desc=True)\
             .execute()
 
-        if not findings.data:
+        saas_findings = _fetch_saas_findings_for_user(user_id)
+
+        if not findings.data and not saas_findings:
             return {
                 "company_name": company_name,
                 "plan": plan,
@@ -370,13 +447,24 @@ def get_dashboard(authorization: str = Header(...)):
                 "findings_summary": None
             }
 
-        ransom_score = calculate_ransom_score(findings.data)
-        governance_score = calculate_governance_score(findings.data)
-        director_liability_score = calculate_director_liability_score(findings.data)
-        compliance = calculate_compliance_scores(findings.data, country, extra_frameworks)
-        penalty_info = get_penalty_info(findings.data, country)
+        scan_findings = findings.data or []
 
-        real_findings = [f for f in findings.data if f.get("fix_type") != "info"]
+        ransom_score = min(100, max(0,
+            calculate_ransom_score(scan_findings) + _saas_ransom_delta(saas_findings)
+        ))
+        governance_score = max(0, min(100,
+            calculate_governance_score(scan_findings) - _saas_governance_delta(saas_findings)
+        ))
+        director_liability_score = min(100, max(0,
+            calculate_director_liability_score(scan_findings) + _saas_director_delta(saas_findings)
+        ))
+        compliance = calculate_compliance_scores(scan_findings, country, extra_frameworks)
+        penalty_info = get_penalty_info(
+            scan_findings + _saas_penalty_proxy(saas_findings),
+            country,
+        )
+
+        real_findings = [f for f in scan_findings if f.get("fix_type") != "info"]
         critical = [f for f in real_findings if f["severity"] == "critical"]
         moderate = [f for f in real_findings if f["severity"] == "moderate"]
         low = [f for f in real_findings if f["severity"] == "low"]
@@ -397,7 +485,7 @@ def get_dashboard(authorization: str = Header(...)):
                 "low": len(low),
                 "total": len(real_findings)
             },
-            "top_findings": findings.data[:5],
+            "top_findings": scan_findings[:5],
             "compliance": compliance,
             "penalty_info": penalty_info
         }
