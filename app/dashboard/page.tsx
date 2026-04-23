@@ -716,6 +716,7 @@ export default function DashboardPage() {
           <div className="hidden md:flex items-center gap-6">
             <a href="/dashboard" className="text-gray-400 hover:text-white text-sm">Dashboard</a>
             <a href="/dashboard/scanning" className="text-gray-400 hover:text-white text-sm">Run Scan</a>
+            <a href="/saas/connections" className="text-gray-400 hover:text-white text-sm">SaaS Tools</a>
             <a href="/settings" className="text-gray-400 hover:text-white text-sm">Settings</a>
             <a href="/pricing" className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg font-medium">Upgrade</a>
             <div className="flex items-center gap-2">
@@ -744,6 +745,7 @@ export default function DashboardPage() {
           <div className="md:hidden mt-4 flex flex-col gap-3 border-t border-gray-800 pt-4">
             <a href="/dashboard" className="text-gray-400 hover:text-white text-sm">Dashboard</a>
             <a href="/dashboard/scanning" className="text-gray-400 hover:text-white text-sm">Run Scan</a>
+            <a href="/saas/connections" className="text-gray-400 hover:text-white text-sm">SaaS Tools</a>
             <a href="/settings" className="text-gray-400 hover:text-white text-sm">Settings</a>
             <a href="/pricing" className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-lg font-medium w-fit">Upgrade</a>
             <div className="flex items-center gap-2">
