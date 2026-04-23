@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { Navbar } from "../../../components/ui/Navbar";
+import DashboardNavbar from "../../../components/ui/DashboardNavbar";
 import { ToastProvider, useToast } from "../../../components/ui/Toast";
 import { authFetch, getToken } from "../../../lib/auth";
 import AppCatalog, { RegistryApp } from "../../../components/saas/AppCatalog";
@@ -100,10 +100,9 @@ function CatalogInner() {
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-gray-950">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+    <main className="min-h-screen bg-gray-950 text-white">
+      <DashboardNavbar />
+      <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-white">Add a tool</h1>
@@ -159,8 +158,7 @@ function CatalogInner() {
             </div>
           )}
         </div>
-      </main>
-    </>
+    </main>
   );
 }
 

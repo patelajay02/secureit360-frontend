@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-import { Navbar } from "../../../components/ui/Navbar";
+import DashboardNavbar from "../../../components/ui/DashboardNavbar";
 import { ToastProvider, useToast } from "../../../components/ui/Toast";
 import { authFetch, getToken } from "../../../lib/auth";
 import ConnectionsList, {
@@ -115,11 +115,10 @@ function ConnectionsInner() {
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-gray-950">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <main className="min-h-screen bg-gray-950 text-white">
+      <DashboardNavbar />
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
             <div>
               <h1 className="text-2xl font-bold text-white">Your business tools</h1>
               <p className="text-gray-400 text-sm mt-1">
@@ -160,8 +159,7 @@ function ConnectionsInner() {
             )}
           </div>
         </div>
-      </main>
-    </>
+    </main>
   );
 }
 
