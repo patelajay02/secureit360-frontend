@@ -26,9 +26,10 @@ from routes.threat_intel import router as threat_intel_router
 from routes.saas import router as saas_router
 
 # Import scheduler
-from services.scheduler import start_scheduler, send_weekly_email_for_tenant
+from services.scheduler import scheduler, start_scheduler, send_weekly_email_for_tenant
 from services.database import supabase_admin
 from services.email_service import send_alert_email
+from services.hibp_watch import check_for_new_breaches
 
 # Create Supabase client
 supabase = create_client(
@@ -41,6 +42,19 @@ supabase = create_client(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_scheduler(supabase)
+    # Real-time HIBP breach watch — runs every 5 minutes alongside the
+    # daily scans, weekly director emails, and monthly reports already
+    # registered inside start_scheduler. Intentionally registered here
+    # rather than inside scheduler.py so the watch is opt-in per-deploy
+    # if we ever need to disable it without touching the rest of the
+    # cron lineup.
+    scheduler.add_job(
+        check_for_new_breaches,
+        "interval",
+        minutes=5,
+        id="hibp_breach_watch",
+        replace_existing=True,
+    )
     print("[SecureIT360] Scheduler started")
     yield
     print("[SecureIT360] Shutting down")
