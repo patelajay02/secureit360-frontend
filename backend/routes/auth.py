@@ -1,11 +1,20 @@
 ﻿# SecureIT360 - Authentication Routes
 import threading
 import hashlib
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
 from services.database import supabase, supabase_admin
+from middleware.auth_middleware import (
+    require_platform_admin,
+    get_current_user,
+    get_request_ip,
+    get_user_tenant_membership,
+)
+from services.audit import log_audit
+from services.rate_limit import enforce_rate_limit
+from services.recaptcha import verify_recaptcha
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -29,7 +38,11 @@ class LoginRequest(BaseModel):
 # --- REGISTER -----------------------------------------------------------
 
 @router.post("/register")
-def register(data: RegisterRequest):
+def register(data: RegisterRequest, request: Request):
+    ip = get_request_ip(request)
+    enforce_rate_limit(f"register:{ip}", 5, 3600)
+    if not verify_recaptcha(data.recaptcha_token, ip):
+        raise HTTPException(status_code=400, detail="reCAPTCHA verification failed. Please try again.")
     try:
         email_domain = data.email.split('@')[-1].lower()
         company_domain = data.domain.lower().replace('www.', '')
@@ -144,7 +157,9 @@ def register(data: RegisterRequest):
 # --- LOGIN --------------------------------------------------------------
 
 @router.post("/login")
-def login(data: LoginRequest):
+def login(data: LoginRequest, request: Request):
+    ip = get_request_ip(request)
+    enforce_rate_limit(f"login:{ip}", 10, 300)
     try:
         auth_response = supabase.auth.sign_in_with_password({
             "email": data.email,
@@ -249,11 +264,55 @@ def refresh_token(data: RefreshRequest):
 # --- DELETE USER (authenticated) ----------------------------------------
 
 @router.delete("/users/{user_id}")
-def delete_user(user_id: str, authorization: str = Header(...)):
+def delete_user(user_id: str, request: Request, caller: dict = Depends(get_current_user)):
+    """Delete a user account. Authorized only when the caller is:
+      - deleting their own account, OR
+      - an owner/admin of the SAME tenant as the target, OR
+      - a platform admin.
+    """
+    caller_id = caller["user_id"]
+    ip = get_request_ip(request)
+
+    target_membership = get_user_tenant_membership(user_id)
+    target_tenant_id = target_membership["tenant_id"] if target_membership else None
+
+    # Platform-admin check (authoritative table).
+    is_admin = False
+    try:
+        admin_row = supabase_admin.table("platform_admins")\
+            .select("user_id").eq("user_id", caller_id).limit(1).execute()
+        is_admin = bool(admin_row.data)
+    except Exception:
+        is_admin = False
+
+    authorized = False
+    if caller_id == user_id:
+        authorized = True  # self-deletion
+    elif is_admin:
+        authorized = True
+    else:
+        caller_membership = get_user_tenant_membership(caller_id)
+        if (caller_membership and target_membership
+                and caller_membership["tenant_id"] == target_membership["tenant_id"]
+                and caller_membership["role"] in ("owner", "admin")):
+            authorized = True
+
+    if not authorized:
+        log_audit("auth.user.delete", actor_user_id=caller_id, target_type="user",
+                  target_id=user_id, target_tenant_id=target_tenant_id,
+                  outcome="denied", ip=ip)
+        raise HTTPException(status_code=403, detail="Not authorized to delete this user")
+
     try:
         supabase_admin.rpc("delete_user_completely", {"p_user_id": user_id}).execute()
+        log_audit("auth.user.delete", actor_user_id=caller_id, target_type="user",
+                  target_id=user_id, target_tenant_id=target_tenant_id,
+                  outcome="success", ip=ip)
         return {"message": "User deleted successfully"}
     except Exception as e:
+        log_audit("auth.user.delete", actor_user_id=caller_id, target_type="user",
+                  target_id=user_id, target_tenant_id=target_tenant_id,
+                  outcome="error", ip=ip)
         print(f"[DELETE ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -343,8 +402,15 @@ def get_users(authorization: str = Header(...)):
 
 # --- ADMIN - LIST ALL USERS ---------------------------------------------
 
+@router.get("/admin/me")
+def admin_me(admin: dict = Depends(require_platform_admin)):
+    """Frontend gate: 200 + is_platform_admin only for a verified platform admin;
+    otherwise require_platform_admin raises 401/403. No secret, no client trust."""
+    return {"is_platform_admin": True, "user_id": admin["user_id"]}
+
+
 @router.get("/admin/users")
-def admin_get_users():
+def admin_get_users(request: Request, admin: dict = Depends(require_platform_admin)):
     try:
         tenants = supabase_admin.table("tenants")\
             .select("*, tenant_users(user_id, role, status)")\
@@ -370,6 +436,9 @@ def admin_get_users():
                     except Exception:
                         pass
 
+        log_audit("admin.users.list", actor_user_id=admin["user_id"],
+                  outcome="success", ip=get_request_ip(request),
+                  detail={"count": len(users)})
         return {"users": users}
 
     except Exception as e:
@@ -380,11 +449,20 @@ def admin_get_users():
 # --- ADMIN - DELETE USER ------------------------------------------------
 
 @router.delete("/admin/delete/{user_id}")
-def admin_delete_user(user_id: str):
+def admin_delete_user(user_id: str, request: Request, admin: dict = Depends(require_platform_admin)):
+    ip = get_request_ip(request)
+    target_membership = get_user_tenant_membership(user_id)
+    target_tenant_id = target_membership["tenant_id"] if target_membership else None
     try:
         supabase_admin.rpc("delete_user_completely", {"p_user_id": user_id}).execute()
+        log_audit("admin.user.delete", actor_user_id=admin["user_id"], target_type="user",
+                  target_id=user_id, target_tenant_id=target_tenant_id,
+                  outcome="success", ip=ip)
         return {"message": "User deleted successfully"}
     except Exception as e:
+        log_audit("admin.user.delete", actor_user_id=admin["user_id"], target_type="user",
+                  target_id=user_id, target_tenant_id=target_tenant_id,
+                  outcome="error", ip=ip)
         print(f"[ADMIN DELETE ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -395,7 +473,9 @@ class SuspendRequest(BaseModel):
     action: str
 
 @router.post("/admin/suspend/{user_id}")
-def admin_suspend_user(user_id: str, data: SuspendRequest):
+def admin_suspend_user(user_id: str, data: SuspendRequest, request: Request,
+                       admin: dict = Depends(require_platform_admin)):
+    ip = get_request_ip(request)
     try:
         tenant_user = supabase_admin.table("tenant_users")\
             .select("tenant_id")\
@@ -412,9 +492,14 @@ def admin_suspend_user(user_id: str, data: SuspendRequest):
             .eq("id", tenant_id)\
             .execute()
 
+        log_audit("admin.tenant.suspend", actor_user_id=admin["user_id"], target_type="tenant",
+                  target_id=tenant_id, target_tenant_id=tenant_id, outcome="success", ip=ip,
+                  detail={"action": data.action, "new_status": new_status})
         return {"message": f"User {data.action}ed successfully"}
 
     except Exception as e:
+        log_audit("admin.tenant.suspend", actor_user_id=admin["user_id"], target_type="user",
+                  target_id=user_id, outcome="error", ip=ip, detail={"action": data.action})
         print(f"[SUSPEND ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -425,7 +510,9 @@ class AccessRequest(BaseModel):
     action: str
 
 @router.post("/admin/access/{user_id}")
-def admin_grant_access(user_id: str, data: AccessRequest):
+def admin_grant_access(user_id: str, data: AccessRequest, request: Request,
+                       admin: dict = Depends(require_platform_admin)):
+    ip = get_request_ip(request)
     try:
         tenant_user = supabase_admin.table("tenant_users")\
             .select("tenant_id")\
@@ -447,9 +534,14 @@ def admin_grant_access(user_id: str, data: AccessRequest):
                 .eq("id", tenant_id)\
                 .execute()
 
+        log_audit("admin.tenant.access", actor_user_id=admin["user_id"], target_type="tenant",
+                  target_id=tenant_id, target_tenant_id=tenant_id, outcome="success", ip=ip,
+                  detail={"action": data.action})
         return {"message": f"Access {data.action}ed successfully"}
 
     except Exception as e:
+        log_audit("admin.tenant.access", actor_user_id=admin["user_id"], target_type="user",
+                  target_id=user_id, outcome="error", ip=ip, detail={"action": data.action})
         print(f"[ACCESS ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -460,7 +552,9 @@ class ExtendTrialRequest(BaseModel):
     days: int
 
 @router.post("/admin/extend-trial/{user_id}")
-def admin_extend_trial(user_id: str, data: ExtendTrialRequest):
+def admin_extend_trial(user_id: str, data: ExtendTrialRequest, request: Request,
+                       admin: dict = Depends(require_platform_admin)):
+    ip = get_request_ip(request)
     try:
         tenant_user = supabase_admin.table("tenant_users")\
             .select("tenant_id")\
@@ -495,9 +589,14 @@ def admin_extend_trial(user_id: str, data: ExtendTrialRequest):
             .eq("id", tenant_id)\
             .execute()
 
+        log_audit("admin.tenant.extend_trial", actor_user_id=admin["user_id"], target_type="tenant",
+                  target_id=tenant_id, target_tenant_id=tenant_id, outcome="success", ip=ip,
+                  detail={"days": data.days})
         return {"message": f"Trial extended by {data.days} days"}
 
     except Exception as e:
+        log_audit("admin.tenant.extend_trial", actor_user_id=admin["user_id"], target_type="user",
+                  target_id=user_id, outcome="error", ip=ip, detail={"days": data.days})
         print(f"[EXTEND TRIAL ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -511,7 +610,9 @@ class CreateAccountRequest(BaseModel):
     country: str = "NZ"
 
 @router.post("/admin/create-account")
-def admin_create_account(data: CreateAccountRequest):
+def admin_create_account(data: CreateAccountRequest, request: Request,
+                         admin: dict = Depends(require_platform_admin)):
+    ip = get_request_ip(request)
     try:
         auth_response = supabase_admin.auth.admin.create_user({
             "email": data.email,
@@ -548,6 +649,9 @@ def admin_create_account(data: CreateAccountRequest):
             "verified": True
         }).execute()
 
+        log_audit("admin.account.create", actor_user_id=admin["user_id"], target_type="tenant",
+                  target_id=tenant_id, target_tenant_id=tenant_id, outcome="success", ip=ip,
+                  detail={"company_name": data.company_name, "country": data.country})
         return {
             "message": "Test account created successfully",
             "tenant_id": tenant_id,
@@ -556,6 +660,8 @@ def admin_create_account(data: CreateAccountRequest):
         }
 
     except Exception as e:
+        log_audit("admin.account.create", actor_user_id=admin["user_id"],
+                  outcome="error", ip=ip, detail={"company_name": data.company_name})
         print(f"[CREATE ACCOUNT ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -591,11 +697,18 @@ def verify_password(data: ReauthRequest, authorization: str = Header(...)):
 # --- VERIFY EMAIL CALLBACK ----------------------------------------------
 
 @router.post("/verify-email")
-def verify_email(data: dict):
+def verify_email(request: Request, caller: dict = Depends(get_current_user)):
+    """Activate the caller's OWN account (pending -> trial).
+
+    The user_id is derived from the verified Supabase access token supplied in
+    the Authorization header (the token present on the email-confirmation
+    redirect) — never trusted from the request body. This prevents an attacker
+    from activating an arbitrary account by POSTing someone else's user_id.
+    """
+    ip = get_request_ip(request)
+    enforce_rate_limit(f"verify-email:{ip}", 20, 3600)
     try:
-        user_id = data.get("user_id")
-        if not user_id:
-            raise HTTPException(status_code=400, detail="Missing user_id")
+        user_id = caller["user_id"]
 
         tenant_user = supabase_admin.table("tenant_users")\
             .select("tenant_id")\
@@ -611,8 +724,13 @@ def verify_email(data: dict):
             .eq("status", "pending")\
             .execute()
 
+        log_audit("auth.email.verify", actor_user_id=user_id, actor_tenant_id=tenant_id,
+                  target_type="tenant", target_id=tenant_id, target_tenant_id=tenant_id,
+                  outcome="success", ip=ip)
         return {"message": "Account activated successfully"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[VERIFY EMAIL ERROR] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))

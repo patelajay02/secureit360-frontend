@@ -3,7 +3,7 @@
 # Creates the FastAPI app, sets up CORS, connects all routes, and starts the scheduler.
 
 import os
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -24,12 +24,15 @@ from routes.integrations import router as integrations_router
 from routes.google_workspace import router as google_workspace_router
 from routes.threat_intel import router as threat_intel_router
 from routes.saas import router as saas_router
+from routes.scheduler import router as scheduler_router
 
 # Import scheduler
 from services.scheduler import scheduler, start_scheduler, send_weekly_email_for_tenant
 from services.database import supabase_admin
 from services.email_service import send_alert_email
 from services.hibp_watch import check_for_new_breaches
+from middleware.auth_middleware import require_platform_admin, get_request_ip
+from services.audit import log_audit
 
 # Create Supabase client
 supabase = create_client(
@@ -97,6 +100,7 @@ app.include_router(integrations_router, prefix="/integrations", tags=["Integrati
 app.include_router(google_workspace_router, prefix="/integrations/google", tags=["Google Workspace"])
 app.include_router(threat_intel_router, prefix="/threat-intel", tags=["Threat Intelligence"])
 app.include_router(saas_router, prefix="/saas", tags=["SaaS Connector"])
+app.include_router(scheduler_router, prefix="/scheduler", tags=["Scheduler"])
 
 # --- Health check -------------------------------------------------------
 
@@ -104,15 +108,16 @@ app.include_router(saas_router, prefix="/saas", tags=["SaaS Connector"])
 def health_check():
     return {"status": "ok", "product": "SecureIT360"}
 
-# --- TEMP: Test weekly director email -----------------------------------
-# Remove this endpoint after launch testing is complete
+# --- Test weekly director email (platform-admin only) -------------------
+# Manual trigger for the weekly director email across all active tenants.
+# Protected by platform-admin authorization (previously an in-repo shared
+# secret, which has been removed).
 
 @app.post("/test/weekly-email")
-async def test_weekly_email(x_test_secret: str = Header(...)):
-    """Triggers the weekly director email for all active tenants. For testing only."""
-    if x_test_secret != "secureit360-test-2024":
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+async def test_weekly_email(request: Request, admin: dict = Depends(require_platform_admin)):
+    """Triggers the weekly director email for all active tenants. Platform-admin only."""
+    log_audit("admin.test.weekly_email", actor_user_id=admin["user_id"],
+              outcome="success", ip=get_request_ip(request))
     try:
         result = supabase_admin.table("tenants").select("*").in_("status", ["active", "comped"]).execute()
         tenants = result.data or []
@@ -131,15 +136,16 @@ async def test_weekly_email(x_test_secret: str = Header(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# --- TEMP: Test critical alert email ------------------------------------
-# Remove this endpoint after launch testing is complete
+# --- Test critical alert email (platform-admin only) --------------------
+# Manual trigger for a critical alert email to the Quality Mark tenant.
+# Protected by platform-admin authorization (previously an in-repo shared
+# secret, which has been removed).
 
 @app.post("/test/alert-email")
-async def test_alert_email(x_test_secret: str = Header(...)):
-    """Triggers a critical alert email for Quality Mark tenant. For testing only."""
-    if x_test_secret != "secureit360-test-2024":
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+async def test_alert_email(request: Request, admin: dict = Depends(require_platform_admin)):
+    """Triggers a critical alert email for Quality Mark tenant. Platform-admin only."""
+    log_audit("admin.test.alert_email", actor_user_id=admin["user_id"],
+              outcome="success", ip=get_request_ip(request))
     try:
         # Get Quality Mark tenant
         tenant_result = supabase_admin.table("tenants")\

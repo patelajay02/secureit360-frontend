@@ -2,10 +2,9 @@
 # Checks SSL certificate expiry and missing security headers with specific regulation clauses
 
 import ssl
-import socket
-import httpx
 from datetime import datetime, timezone
 from services.database import supabase_admin
+from services.target_guard import get_peer_certificate, safe_get, TargetValidationError
 
 
 def upsert_finding(tenant_id, scan_id, engine, severity, title, description, governance_gap, regulations, fix_type, score_impact):
@@ -49,17 +48,18 @@ def upsert_finding(tenant_id, scan_id, engine, severity, title, description, gov
 
 
 def check_ssl_expiry(domain: str) -> dict:
+    # get_peer_certificate validates the target (rejecting private/localhost/
+    # metadata addresses), pins to a validated IP, and verifies TLS.
     try:
-        context = ssl.create_default_context()
-        with socket.create_connection((domain, 443), timeout=10) as sock:
-            with context.wrap_socket(sock, server_hostname=domain) as ssock:
-                cert = ssock.getpeercert()
-                expiry_date_str = cert["notAfter"]
-                expiry_date = datetime.strptime(
-                    expiry_date_str, "%b %d %H:%M:%S %Y %Z"
-                ).replace(tzinfo=timezone.utc)
-                days_remaining = (expiry_date - datetime.now(timezone.utc)).days
-                return {"valid": True, "days_remaining": days_remaining}
+        cert = get_peer_certificate(domain, 443, timeout=10)
+        expiry_date_str = cert["notAfter"]
+        expiry_date = datetime.strptime(
+            expiry_date_str, "%b %d %H:%M:%S %Y %Z"
+        ).replace(tzinfo=timezone.utc)
+        days_remaining = (expiry_date - datetime.now(timezone.utc)).days
+        return {"valid": True, "days_remaining": days_remaining}
+    except TargetValidationError:
+        return {"valid": False, "days_remaining": 0, "error": "Target not permitted"}
     except ssl.SSLCertVerificationError:
         return {"valid": False, "days_remaining": 0, "error": "Invalid certificate"}
     except Exception:
@@ -68,19 +68,20 @@ def check_ssl_expiry(domain: str) -> dict:
 
 async def check_security_headers(domain: str) -> dict:
     missing_headers = []
+    important_headers = [
+        "x-frame-options",
+        "x-content-type-options",
+        "strict-transport-security",
+        "content-security-policy"
+    ]
     try:
-        async with httpx.AsyncClient(verify=False, timeout=15) as client:
-            response = await client.get(f"https://{domain}")
-            headers = response.headers
-            important_headers = [
-                "x-frame-options",
-                "x-content-type-options",
-                "strict-transport-security",
-                "content-security-policy"
-            ]
-            for header in important_headers:
-                if header not in headers:
-                    missing_headers.append(header)
+        # safe_get enforces SSRF validation, TLS verification, timeouts, and
+        # size limits, and re-validates redirects.
+        response = await safe_get(f"https://{domain}")
+        headers = response.headers
+        for header in important_headers:
+            if header not in headers:
+                missing_headers.append(header)
     except Exception:
         pass
     return {"missing_headers": missing_headers}

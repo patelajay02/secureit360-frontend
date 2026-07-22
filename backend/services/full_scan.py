@@ -9,7 +9,6 @@ from services.website_scan import run_website_scan
 from services.device_scan import run_device_scan
 from services.cloud_scan import run_cloud_scan
 from services.score_calculator import calculate_ransom_score, calculate_governance_score
-from services.regulatory_mapper import generate_compliance_report
 from services.database import supabase_admin
 import asyncio
 
@@ -52,17 +51,10 @@ async def run_full_scan(tenant_id: str, domain_id: str, domain: str, user_id: st
         ransom_result = calculate_ransom_score(tenant_id, scan_id)
         governance_result = calculate_governance_score(tenant_id, scan_id)
 
-        # Get all findings for compliance report
-        findings = supabase_admin.table("findings")\
-            .select("*")\
-            .eq("tenant_id", tenant_id)\
-            .eq("scan_id", scan_id)\
-            .execute()
-
-        # Generate compliance report
-        compliance_report = generate_compliance_report(
-            tenant_id, scan_id, findings.data
-        )
+        # Regulatory intelligence is resolved per-finding at read time by
+        # services/regulatory_intelligence.py (the single source of truth),
+        # using the tenant's trusted country. The old dormant compliance-report
+        # generator has been retired.
 
         # Update scan as complete
         supabase_admin.table("scans")\
@@ -95,8 +87,7 @@ async def run_full_scan(tenant_id: str, domain_id: str, domain: str, user_id: st
                 "website": website_result,
                 "devices": device_result,
                 "cloud": cloud_result
-            },
-            "compliance": compliance_report
+            }
         }
 
     except Exception as e:

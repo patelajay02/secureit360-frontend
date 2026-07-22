@@ -1,0 +1,3375 @@
+{
+  "schema_version": "1.0",
+  "last_reviewed": "2026-07-21",
+  "disclaimer": "Regulatory intelligence, not legal advice. Every clause reference, date, penalty figure and applicability condition must be verified by a qualified legal practitioner in the relevant jurisdiction (AU/NZ/AE/IN) before being shown to a customer. All wording is potential-gap language, never a confirmed breach or liability determination.",
+  "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+  "not_wired_to_production": true,
+  "canonical_country_codes": [
+    "AU",
+    "NZ",
+    "AE",
+    "IN"
+  ],
+  "_meta": {
+    "authoring_coverage": "Clause libraries, wording templates, priority model and framework catalog are complete. findings[] fully authors the scanner-backed finding types across all four countries, plus representative proposed stubs. The complete 85-code catalogue is in the companion Markdown (Table A) and summarised in catalogue_index below; proposed codes are to be authored in the next pass using the identical mapping schema.",
+    "confidence_values": [
+      "high",
+      "medium",
+      "to_verify"
+    ],
+    "implementation_status_values": [
+      "real",
+      "shallow",
+      "partial",
+      "proposed"
+    ],
+    "legal_status_values": [
+      "legislation",
+      "regulation",
+      "binding_direction",
+      "sector_requirement",
+      "standard",
+      "guidance"
+    ]
+  },
+  "priority_model": {
+    "inputs": [
+      "technical_severity",
+      "exploitability",
+      "public_exposure",
+      "breach_evidence",
+      "asset_criticality",
+      "business_impact",
+      "regulatory_relevance",
+      "ransomware_relevance",
+      "identity_privilege",
+      "active_exploitation"
+    ],
+    "levels": {
+      "critical": {
+        "target_days": 0,
+        "label": "Immediate action"
+      },
+      "high": {
+        "target_days": 7,
+        "label": "Target within 7 days"
+      },
+      "medium": {
+        "target_days": 30,
+        "label": "Target within 30 days"
+      },
+      "low": {
+        "target_days": 90,
+        "label": "Target within 90 days"
+      },
+      "informational": {
+        "target_days": null,
+        "label": "Monitor or accept"
+      }
+    },
+    "penalty_rule": "Penalties are indicative maximums depending on circumstances, never presented as guaranteed financial loss."
+  },
+  "wording_templates": {
+    "potential_compliance_gap": "This finding may indicate a gap against {clause_reference} ({law_name}). A compliance review is recommended to confirm applicability.",
+    "possible_notification_obligation": "If personal information was actually exposed, this may give rise to a notification obligation under {law_name}. Whether it does depends on the facts - seek advice before notifying.",
+    "governance_concern": "This reflects a governance gap: {gap}. Technical fixes alone may not prevent recurrence.",
+    "director_oversight_concern": "Cyber-risk oversight may be relevant to director/officer duties under {clause_reference}, depending on the organisation's circumstances.",
+    "sector_specific_applicability": "{clause_reference} applies only if the organisation is {condition}.",
+    "guidance_only_mapping": "{framework} is guidance/standard, not law. It is provided to help prioritise remediation.",
+    "legal_review_recommendation": "This is regulatory intelligence, not legal advice. Legal or compliance review may be required before relying on it.",
+    "forthcoming_law": "{law_name} is enacted but not yet in force; treat this as a forward-looking consideration, not a current obligation."
+  },
+  "framework_catalog": {
+    "iso_27001_2022": {
+      "version": "2022",
+      "note": "Annex A themes A.5-A.8. Use 2022 numbering."
+    },
+    "iso_27002_2022": {
+      "version": "2022"
+    },
+    "nist_csf_2_0": {
+      "version": "2.0",
+      "functions": [
+        "GOVERN",
+        "IDENTIFY",
+        "PROTECT",
+        "DETECT",
+        "RESPOND",
+        "RECOVER"
+      ]
+    },
+    "cis_v8": {
+      "version": "8"
+    },
+    "essential_eight": {
+      "version": "current",
+      "legal_status": "guidance"
+    },
+    "pci_dss_4_0_1": {
+      "version": "4.0.1",
+      "applicability": "only if cardholder data is processed"
+    },
+    "soc2": {
+      "version": "TSC 2017 (rev.)"
+    },
+    "legacy_note": "ISO/IEC 27001:2013 numbering (e.g. A.9.4, A.12.6) is superseded. Map A.9.4 -> A.5.15/A.8.5 and A.12.6 -> A.8.8."
+  },
+  "countries": {
+    "AU": {
+      "name": "Australia",
+      "notes": "Privacy Act has a small-business exemption below A$3M turnover (with exceptions). Sector laws (SOCI, CPS 234) and ransomware-payment reporting apply only to covered entities.",
+      "clause_library": {
+        "AU-PRIV-APP11": {
+          "law_name": "Privacy Act 1988 (Cth)",
+          "clause_reference": "APP 11",
+          "clause_title": "Security of personal information",
+          "plain_english_summary": "An APP entity must take reasonable steps to protect personal information from misuse, interference, loss and unauthorised access, modification or disclosure (11.1), and destroy or de-identify it when no longer needed (11.2).",
+          "why_relevant": "Technical security weaknesses may indicate the reasonable-steps standard is not met.",
+          "applicability_conditions": [
+            "country=AU",
+            "APP entity: turnover>A$3M OR health provider OR trades in personal information OR credit provider OR Cth contractor"
+          ],
+          "source": "OAIC APP Guidelines Chapter 11",
+          "effective_date": "2014-03-12",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "AU-PRIV-NDB": {
+          "law_name": "Privacy Act 1988 (Cth)",
+          "clause_reference": "Part IIIC (NDB scheme)",
+          "clause_title": "Notifiable Data Breaches",
+          "plain_english_summary": "Assess a suspected eligible data breach expeditiously (within 30 days) and, if it is likely to result in serious harm, notify the OAIC and affected individuals as soon as practicable.",
+          "why_relevant": "Applies where personal information is actually exposed, not to a control weakness alone.",
+          "applicability_conditions": [
+            "country=AU",
+            "APP entity",
+            "actual_breach=true",
+            "serious_harm_likely=true"
+          ],
+          "source": "OAIC Data Breach Preparation and Response guide",
+          "effective_date": "2018-02-22",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "AU-PRIV-PENALTY": {
+          "law_name": "Privacy Act 1988 (Cth)",
+          "clause_reference": "s13G",
+          "clause_title": "Serious or repeated interference with privacy",
+          "plain_english_summary": "Civil penalty for serious or repeated interference with privacy, up to the greater of A$50M, three times the benefit, or 30% of adjusted turnover.",
+          "why_relevant": "Indicative maximum enforcement context; court-imposed on OAIC application, not automatic.",
+          "applicability_conditions": [
+            "country=AU",
+            "APP entity",
+            "serious_or_repeated=true"
+          ],
+          "source": "Privacy Legislation Amendment (Enforcement and Other Measures) Act 2022",
+          "effective_date": "2022-12-13",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "AU-CORP-180": {
+          "law_name": "Corporations Act 2001 (Cth)",
+          "clause_reference": "s180",
+          "clause_title": "Care and diligence - directors' and officers' duties",
+          "plain_english_summary": "Directors and officers must exercise their powers and duties with the care and diligence a reasonable person would exercise; cyber-risk management can fall within this duty.",
+          "why_relevant": "Poor cyber governance may be relevant to director duties (cf. ASIC v RI Advice Group).",
+          "applicability_conditions": [
+            "country=AU",
+            "organisation_type=company",
+            "role=director_or_officer"
+          ],
+          "source": "Corporations Act 2001 s180; ASIC v RI Advice Group [2022] FCA 496",
+          "effective_date": "2001-07-15",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "AU-CYBER-RANSOM": {
+          "law_name": "Cyber Security Act 2024 (Cth)",
+          "clause_reference": "Ransomware payment reporting",
+          "clause_title": "Ransomware payment reporting obligation",
+          "plain_english_summary": "Covered entities must report a ransomware payment within 72 hours of making it or becoming aware it has been made.",
+          "why_relevant": "Relevant to ransomware-entry findings for covered entities only.",
+          "applicability_conditions": [
+            "country=AU",
+            "turnover>threshold_set_by_rules OR critical_infrastructure=true"
+          ],
+          "source": "Cyber Security Act 2024 (Cth)",
+          "effective_date": "2025",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "AU-SOCI": {
+          "law_name": "Security of Critical Infrastructure Act 2018 (Cth)",
+          "clause_reference": "Risk management program / incident reporting",
+          "clause_title": "Critical infrastructure obligations",
+          "plain_english_summary": "Responsible entities for critical infrastructure assets must maintain a risk-management program and report incidents.",
+          "why_relevant": "Only for CI sectors.",
+          "applicability_conditions": [
+            "country=AU",
+            "critical_infrastructure=true"
+          ],
+          "source": "SOCI Act 2018",
+          "effective_date": "2018",
+          "last_verified_date": "to_verify",
+          "legal_status": "sector_requirement"
+        },
+        "AU-CPS234": {
+          "law_name": "APRA Prudential Standard CPS 234",
+          "clause_reference": "CPS 234",
+          "clause_title": "Information Security",
+          "plain_english_summary": "APRA-regulated entities must maintain information-security capability commensurate with threats.",
+          "why_relevant": "Only for APRA-regulated entities.",
+          "applicability_conditions": [
+            "country=AU",
+            "apra_regulated=true"
+          ],
+          "source": "APRA CPS 234",
+          "effective_date": "2019-07-01",
+          "last_verified_date": "to_verify",
+          "legal_status": "sector_requirement"
+        },
+        "AU-ACL": {
+          "law_name": "Australian Consumer Law (Sch 2, CCA 2010)",
+          "clause_reference": "Misleading or deceptive conduct",
+          "clause_title": "Security representations to consumers",
+          "plain_english_summary": "Businesses must not make misleading representations about their security.",
+          "why_relevant": "Relevant where public security claims are made and not met.",
+          "applicability_conditions": [
+            "country=AU",
+            "makes_security_claims_to_consumers=true"
+          ],
+          "source": "Competition and Consumer Act 2010 Sch 2",
+          "effective_date": "2011-01-01",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "AU-E8": {
+          "law_name": "ASD Essential Eight",
+          "clause_reference": "Essential Eight Maturity Model",
+          "clause_title": "Eight mitigation strategies",
+          "plain_english_summary": "ACSC-recommended baseline mitigations (patching, MFA, restrict admin, backups, etc.).",
+          "why_relevant": "Prioritisation guidance, not legislation.",
+          "applicability_conditions": [
+            "country=AU"
+          ],
+          "source": "ACSC Essential Eight",
+          "effective_date": "current",
+          "last_verified_date": "2026-07-21",
+          "legal_status": "guidance"
+        }
+      }
+    },
+    "NZ": {
+      "name": "New Zealand",
+      "notes": "No small-business exemption. There is no fixed 72-hour notification deadline in the Privacy Act 2020; the standard is 'as soon as practicable' where serious harm is likely.",
+      "clause_library": {
+        "NZ-PRIV-IPP5": {
+          "law_name": "Privacy Act 2020 (NZ)",
+          "clause_reference": "IPP 5 (s22)",
+          "clause_title": "Storage and security of personal information",
+          "plain_english_summary": "An agency holding personal information must protect it with security safeguards that are reasonable in the circumstances.",
+          "why_relevant": "Technical security weaknesses may indicate reasonable safeguards are not in place.",
+          "applicability_conditions": [
+            "country=NZ",
+            "holds_personal_information=true"
+          ],
+          "source": "Privacy Act 2020 (NZ), IPP 5",
+          "effective_date": "2020-12-01",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "NZ-PRIV-NOTIF": {
+          "law_name": "Privacy Act 2020 (NZ)",
+          "clause_reference": "Part 6 (ss112-118)",
+          "clause_title": "Notifiable privacy breach",
+          "plain_english_summary": "Where a privacy breach has caused or is likely to cause serious harm, notify the Privacy Commissioner and affected individuals as soon as practicable after becoming aware of it.",
+          "why_relevant": "Applies to actual breaches likely to cause serious harm. No fixed 72-hour rule.",
+          "applicability_conditions": [
+            "country=NZ",
+            "actual_breach=true",
+            "serious_harm_likely=true"
+          ],
+          "source": "Privacy Act 2020 (NZ), Part 6",
+          "effective_date": "2020-12-01",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "NZ-CO-137": {
+          "law_name": "Companies Act 1993 (NZ)",
+          "clause_reference": "s137 (with s131)",
+          "clause_title": "Director's duty of care; duty to act in good faith",
+          "plain_english_summary": "Directors must exercise care, diligence and skill, and act in good faith and the best interests of the company.",
+          "why_relevant": "Cyber-risk oversight may be relevant to director duties.",
+          "applicability_conditions": [
+            "country=NZ",
+            "organisation_type=company",
+            "role=director"
+          ],
+          "source": "Companies Act 1993 (NZ) ss131,137",
+          "effective_date": "1993",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "NZ-FMC": {
+          "law_name": "Financial Markets Conduct Act 2013 (NZ)",
+          "clause_reference": "Conduct/disclosure obligations",
+          "clause_title": "FMC obligations",
+          "plain_english_summary": "Conduct and disclosure obligations for financial-markets participants.",
+          "why_relevant": "Only for FMC reporting entities / licensed providers.",
+          "applicability_conditions": [
+            "country=NZ",
+            "fmc_reporting_entity=true"
+          ],
+          "source": "FMC Act 2013 (NZ)",
+          "effective_date": "2014",
+          "last_verified_date": "to_verify",
+          "legal_status": "sector_requirement"
+        },
+        "NZ-NCSC": {
+          "law_name": "NCSC guidance / NZISM",
+          "clause_reference": "Baseline controls",
+          "clause_title": "Cyber-security guidance",
+          "plain_english_summary": "Baseline cyber-security controls; NZISM applies to government/public sector.",
+          "why_relevant": "Guidance/standard, not legislation.",
+          "applicability_conditions": [
+            "country=NZ"
+          ],
+          "source": "NZ NCSC / NZISM",
+          "effective_date": "current",
+          "last_verified_date": "2026-07-21",
+          "legal_status": "guidance"
+        }
+      }
+    },
+    "AE": {
+      "name": "United Arab Emirates",
+      "notes": "Canonical code is AE (not 'UAE'). Federal PDPL applies onshore; its Executive Regulations were pending, so enforceability of specific obligations is to_verify. DIFC and ADGM laws apply ONLY to entities registered in those free zones.",
+      "clause_library": {
+        "AE-PDPL-SEC": {
+          "law_name": "Federal Decree-Law No. 45 of 2021 (PDPL)",
+          "clause_reference": "Security of processing (article ref to_verify)",
+          "clause_title": "Data security obligations",
+          "plain_english_summary": "Controllers and processors must implement appropriate technical and organisational measures to secure personal data.",
+          "why_relevant": "Technical weaknesses may indicate a gap against PDPL security obligations.",
+          "applicability_conditions": [
+            "country=AE",
+            "onshore_uae=true",
+            "difc_registered=false",
+            "adgm_registered=false"
+          ],
+          "source": "UAE Federal Decree-Law No. 45 of 2021",
+          "effective_date": "2022-01-02",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation",
+          "enforcement_status": "executive_regulations_pending"
+        },
+        "AE-PDPL-BREACH": {
+          "law_name": "Federal Decree-Law No. 45 of 2021 (PDPL)",
+          "clause_reference": "Breach notification (article ref to_verify)",
+          "clause_title": "Personal-data-breach notification",
+          "plain_english_summary": "Notify the UAE Data Office and, where required, affected data subjects of a personal-data breach.",
+          "why_relevant": "Applies to actual breaches; mechanics depend on the Executive Regulations.",
+          "applicability_conditions": [
+            "country=AE",
+            "onshore_uae=true",
+            "actual_breach=true"
+          ],
+          "source": "UAE Federal Decree-Law No. 45 of 2021",
+          "effective_date": "2022-01-02",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation",
+          "enforcement_status": "executive_regulations_pending"
+        },
+        "AE-DIFC-DP": {
+          "law_name": "DIFC Data Protection Law No. 5 of 2020",
+          "clause_reference": "Security & breach obligations",
+          "clause_title": "DIFC data protection",
+          "plain_english_summary": "Security and breach-notification obligations for DIFC entities.",
+          "why_relevant": "Applies only to DIFC-registered entities.",
+          "applicability_conditions": [
+            "country=AE",
+            "difc_registered=true"
+          ],
+          "source": "DIFC Law No. 5 of 2020",
+          "effective_date": "2020-07-01",
+          "last_verified_date": "to_verify",
+          "legal_status": "regulation"
+        },
+        "AE-ADGM-DP": {
+          "law_name": "ADGM Data Protection Regulations 2021",
+          "clause_reference": "Security & breach obligations",
+          "clause_title": "ADGM data protection",
+          "plain_english_summary": "Security and breach-notification obligations for ADGM entities.",
+          "why_relevant": "Applies only to ADGM-registered entities.",
+          "applicability_conditions": [
+            "country=AE",
+            "adgm_registered=true"
+          ],
+          "source": "ADGM Data Protection Regulations 2021",
+          "effective_date": "2021-02-14",
+          "last_verified_date": "to_verify",
+          "legal_status": "regulation"
+        },
+        "AE-IA": {
+          "law_name": "UAE Information Assurance Regulation (TDRA); Dubai ISR",
+          "clause_reference": "IA controls",
+          "clause_title": "Information assurance",
+          "plain_english_summary": "Information-assurance control requirements for government and critical information infrastructure.",
+          "why_relevant": "Sector/entity specific.",
+          "applicability_conditions": [
+            "country=AE",
+            "government_or_cii_or_covered_sector=true"
+          ],
+          "source": "UAE IA Regulation / Dubai ISR",
+          "effective_date": "current",
+          "last_verified_date": "to_verify",
+          "legal_status": "sector_requirement"
+        }
+      }
+    },
+    "IN": {
+      "name": "India",
+      "notes": "The currently in-force security obligations are the IT Act 2000 s43A + SPDI Rules 2011 and the CERT-In Directions 2022 (6-hour reporting). The DPDP Act 2023 is enacted but NOT yet in force pending notified Rules - present it as forthcoming, not an active obligation.",
+      "clause_library": {
+        "IN-ITA-43A": {
+          "law_name": "Information Technology Act 2000 + SPDI Rules 2011",
+          "clause_reference": "s43A + SPDI Rules",
+          "clause_title": "Reasonable security practices for sensitive personal data",
+          "plain_english_summary": "A body corporate handling sensitive personal data must implement reasonable security practices (ISO/IEC 27001 recognised) and may be liable to compensate for negligence.",
+          "why_relevant": "Currently the operative security obligation in India.",
+          "applicability_conditions": [
+            "country=IN",
+            "handles_sensitive_personal_data=true"
+          ],
+          "source": "IT Act 2000 s43A; SPDI Rules 2011",
+          "effective_date": "2011-04-11",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation"
+        },
+        "IN-CERTIN": {
+          "law_name": "CERT-In Directions (28 Apr 2022)",
+          "clause_reference": "Direction No. 20(3)/2022",
+          "clause_title": "Cyber-incident reporting within 6 hours",
+          "plain_english_summary": "Specified cyber incidents must be reported to CERT-In within six hours of noticing; logs retained 180 days.",
+          "why_relevant": "Binding and in force; relevant to actual incidents.",
+          "applicability_conditions": [
+            "country=IN",
+            "actual_incident=true"
+          ],
+          "source": "CERT-In Direction 20(3)/2022",
+          "effective_date": "2022-06-28",
+          "last_verified_date": "to_verify",
+          "legal_status": "binding_direction"
+        },
+        "IN-DPDP-8": {
+          "law_name": "Digital Personal Data Protection Act 2023",
+          "clause_reference": "s8(5)/s8(6); Schedule",
+          "clause_title": "Reasonable security safeguards; breach notification; penalties",
+          "plain_english_summary": "Data Fiduciaries must take reasonable security safeguards and notify breaches; penalties up to Rs 250 crore.",
+          "why_relevant": "Forward-looking - enacted but not yet in force pending Rules.",
+          "applicability_conditions": [
+            "country=IN",
+            "data_fiduciary=true",
+            "act_in_force=false"
+          ],
+          "source": "DPDP Act 2023",
+          "effective_date": "not_in_force",
+          "last_verified_date": "to_verify",
+          "legal_status": "legislation",
+          "enforcement_status": "not_in_force_pending_rules"
+        },
+        "IN-SECTOR": {
+          "law_name": "RBI / SEBI / IRDAI cyber directions",
+          "clause_reference": "Sector frameworks",
+          "clause_title": "Sector cyber-security requirements",
+          "plain_english_summary": "Cyber-security frameworks for regulated banks/NBFCs, market intermediaries and insurers.",
+          "why_relevant": "Only for covered entities.",
+          "applicability_conditions": [
+            "country=IN",
+            "regulated_sector in [banking,securities,insurance]"
+          ],
+          "source": "RBI/SEBI/IRDAI directions",
+          "effective_date": "varies",
+          "last_verified_date": "to_verify",
+          "legal_status": "sector_requirement"
+        }
+      }
+    }
+  },
+  "catalogue_index": [
+    {
+      "finding_code": "EMAIL_SPF_MISSING",
+      "category": "email",
+      "current_scanner": "email_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "EMAIL_DMARC_MISSING",
+      "category": "email",
+      "current_scanner": "email_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "EMAIL_DKIM_MISSING",
+      "category": "email",
+      "current_scanner": null,
+      "implementation_status": "proposed"
+    },
+    {
+      "finding_code": "TLS_CERT_INVALID",
+      "category": "tls",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "shallow"
+    },
+    {
+      "finding_code": "TLS_CERT_EXPIRED",
+      "category": "tls",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "TLS_CERT_EXPIRING",
+      "category": "tls",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "HDR_SECURITY_HEADERS_MISSING",
+      "category": "website",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "shallow"
+    },
+    {
+      "finding_code": "WEB_SERVER_DISCLOSURE",
+      "category": "website",
+      "current_scanner": "device_scan.py",
+      "implementation_status": "shallow"
+    },
+    {
+      "finding_code": "SOFTWARE_OUTDATED",
+      "category": "vulnerability",
+      "current_scanner": "device_scan.py",
+      "implementation_status": "shallow"
+    },
+    {
+      "finding_code": "BREACH_EMAIL_EXPOSED",
+      "category": "breach",
+      "current_scanner": "darkweb_scan.py,hibp_watch.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "CLOUD_STORAGE_PUBLIC",
+      "category": "data_exposure",
+      "current_scanner": "cloud_scan.py",
+      "implementation_status": "shallow"
+    },
+    {
+      "finding_code": "PORT_RDP_EXPOSED",
+      "category": "attack_surface",
+      "current_scanner": "network_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "PORT_SMB_EXPOSED",
+      "category": "attack_surface",
+      "current_scanner": "network_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "PORT_TELNET_EXPOSED",
+      "category": "attack_surface",
+      "current_scanner": "network_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "PORT_SSH_EXPOSED",
+      "category": "attack_surface",
+      "current_scanner": "network_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "PORT_FTP_EXPOSED",
+      "category": "attack_surface",
+      "current_scanner": "network_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "MALWARE_BLACKLIST",
+      "category": "threat_intel",
+      "current_scanner": "threat_intel_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "TI_TYPOSQUAT",
+      "category": "attack_surface",
+      "current_scanner": "threat_intel_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "M365_MFA_GAP",
+      "category": "cloud_posture",
+      "current_scanner": "ms365_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "M365_EXTERNAL_SHARING",
+      "category": "cloud_posture",
+      "current_scanner": "ms365_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "M365_PRIV_ROLE",
+      "category": "cloud_posture",
+      "current_scanner": "ms365_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "M365_INACTIVE",
+      "category": "cloud_posture",
+      "current_scanner": "ms365_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "GWS_MFA_GAP",
+      "category": "cloud_posture",
+      "current_scanner": "google_workspace_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "GWS_EXTERNAL_SHARING",
+      "category": "cloud_posture",
+      "current_scanner": "google_workspace_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "GWS_ADMIN_RISK",
+      "category": "cloud_posture",
+      "current_scanner": "google_workspace_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "GWS_INACTIVE",
+      "category": "cloud_posture",
+      "current_scanner": "google_workspace_scan.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "SAAS_ADMIN_RATIO",
+      "category": "saas_posture",
+      "current_scanner": "generic_checks.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "SAAS_MFA_GAP",
+      "category": "saas_posture",
+      "current_scanner": "generic_checks.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "SAAS_DORMANT",
+      "category": "saas_posture",
+      "current_scanner": "generic_checks.py",
+      "implementation_status": "real"
+    },
+    {
+      "finding_code": "GOV_NO_BACKUP",
+      "category": "governance",
+      "current_scanner": null,
+      "implementation_status": "proposed"
+    },
+    {
+      "finding_code": "GOV_NO_IR_PLAN",
+      "category": "governance",
+      "current_scanner": null,
+      "implementation_status": "proposed"
+    },
+    {
+      "finding_code": "DNS_SUBDOMAIN_TAKEOVER",
+      "category": "dns",
+      "current_scanner": null,
+      "implementation_status": "proposed"
+    }
+  ],
+  "findings": [
+    {
+      "finding_code": "EMAIL_DMARC_MISSING",
+      "finding_name": "Missing DMARC Record",
+      "category": "email_security",
+      "current_scanner": "email_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "No DMARC TXT record published for the domain.",
+          "technical_risk": "Receivers cannot verify From-domain alignment, enabling domain spoofing, BEC and phishing.",
+          "business_impacts": [
+            "invoice/payment fraud",
+            "brand abuse",
+            "customer deception",
+            "email deliverability loss"
+          ],
+          "governance_impact": "No email-security/anti-impersonation policy or control in place.",
+          "director_or_management_context": "Email-fraud exposure may be relevant to director oversight duties depending on circumstances.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)",
+            "Australian Consumer Law"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11",
+            "AU-ACL"
+          ],
+          "regulatory_relevance": "Weak email authentication may indicate 'reasonable steps' under APP 11 are not met (for APP entities).",
+          "penalty_context": "Indicative only; serious/repeated interference maximum under AU-PRIV-PENALTY. Not a guaranteed loss.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "nist_csf_2_0": [
+              "PR.PS"
+            ],
+            "cis_v8": [
+              "9"
+            ],
+            "essential_eight": [
+              "email hardening"
+            ]
+          },
+          "recommended_remediation": "Publish SPF and DKIM, then a DMARC record starting p=none for monitoring and progress to p=quarantine/reject.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "DNS _dmarc TXT with enforcing policy",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 (Privacy Act 1988). A compliance review is recommended to confirm applicability. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "No DMARC TXT record published for the domain.",
+          "technical_risk": "Domain can be spoofed for phishing/BEC against customers and staff.",
+          "business_impacts": [
+            "invoice/payment fraud",
+            "brand abuse",
+            "deliverability loss"
+          ],
+          "governance_impact": "No email-security policy or anti-impersonation control.",
+          "director_or_management_context": "May be relevant to director care duties depending on circumstances.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "May indicate reasonable security safeguards under IPP 5 are not fully in place.",
+          "penalty_context": "No fixed monetary penalty; the Privacy Commissioner may investigate. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "nist_csf_2_0": [
+              "PR.PS"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish SPF and DKIM, then a monitored DMARC policy progressing to enforcement.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "DNS _dmarc TXT with enforcing policy",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 (Privacy Act 2020). Legal or compliance review may be required. Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "No DMARC TXT record published for the domain.",
+          "technical_risk": "Domain spoofing / BEC exposure.",
+          "business_impacts": [
+            "invoice/payment fraud",
+            "brand abuse",
+            "deliverability loss"
+          ],
+          "governance_impact": "No email-security control.",
+          "director_or_management_context": "May be relevant to management oversight depending on circumstances.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a gap against PDPL security-of-processing obligations (onshore UAE; DIFC/ADGM excluded).",
+          "penalty_context": "PDPL Executive Regulations pending; enforceability of specifics to be verified. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "nist_csf_2_0": [
+              "PR.PS"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish SPF and DKIM, then a monitored DMARC policy progressing to enforcement.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "DNS _dmarc TXT with enforcing policy",
+            "re-scan pass"
+          ],
+          "legal_wording": "This provision may be relevant depending on the organisation's circumstances; PDPL implementing regulations are pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "No DMARC TXT record published for the domain.",
+          "technical_risk": "Domain spoofing / BEC exposure.",
+          "business_impacts": [
+            "invoice/payment fraud",
+            "brand abuse",
+            "deliverability loss"
+          ],
+          "governance_impact": "No email-security control.",
+          "director_or_management_context": "May be relevant to management oversight depending on circumstances.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "May indicate reasonable security practices under IT Act s43A/SPDI are not fully met. DPDP Act 2023 is forthcoming.",
+          "penalty_context": "s43A compensation for negligence (in force); DPDP penalties are forthcoming, not active. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "nist_csf_2_0": [
+              "PR.PS"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish SPF and DKIM, then a monitored DMARC policy progressing to enforcement.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "DNS _dmarc TXT with enforcing policy",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against reasonable security practices under IT Act s43A. The DPDP Act 2023 is enacted but not yet in force. Not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "EMAIL_SPF_MISSING",
+      "finding_name": "Missing SPF Record",
+      "category": "email_security",
+      "current_scanner": "email_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "No SPF TXT record published.",
+          "technical_risk": "Unauthorised servers can send as the domain; weaker anti-spoofing and deliverability.",
+          "business_impacts": [
+            "email impersonation",
+            "deliverability loss"
+          ],
+          "governance_impact": "No sender-authentication control.",
+          "director_or_management_context": "May be relevant to director oversight depending on circumstances.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "May indicate 'reasonable steps' under APP 11 are not met (APP entities).",
+          "penalty_context": "Indicative only; see AU-PRIV-PENALTY maximum.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ],
+            "essential_eight": [
+              "email hardening"
+            ]
+          },
+          "recommended_remediation": "Publish an SPF record listing authorised senders, ending with ~all or -all.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "SPF TXT record present",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 (Privacy Act 1988). Not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "No SPF TXT record published.",
+          "technical_risk": "Unauthorised servers can send as the domain.",
+          "business_impacts": [
+            "email impersonation",
+            "deliverability loss"
+          ],
+          "governance_impact": "No sender-authentication control.",
+          "director_or_management_context": "May be relevant to director care duties depending on circumstances.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "May indicate reasonable safeguards under IPP 5 are not fully in place.",
+          "penalty_context": "No fixed penalty; Commissioner may investigate. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish an SPF record listing authorised senders, ending with ~all or -all.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "SPF TXT record present",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 (Privacy Act 2020). Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "No SPF TXT record published.",
+          "technical_risk": "Unauthorised servers can send as the domain.",
+          "business_impacts": [
+            "email impersonation",
+            "deliverability loss"
+          ],
+          "governance_impact": "No sender-authentication control.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a gap against PDPL security obligations (onshore UAE).",
+          "penalty_context": "PDPL Executive Regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish an SPF record listing authorised senders, ending with ~all or -all.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "SPF TXT record present",
+            "re-scan pass"
+          ],
+          "legal_wording": "This provision may be relevant depending on circumstances; PDPL regulations pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "No SPF TXT record published.",
+          "technical_risk": "Unauthorised servers can send as the domain.",
+          "business_impacts": [
+            "email impersonation",
+            "deliverability loss"
+          ],
+          "governance_impact": "No sender-authentication control.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "May indicate reasonable security practices under IT Act s43A/SPDI are not fully met.",
+          "penalty_context": "s43A compensation (in force); DPDP forthcoming. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish an SPF record listing authorised senders, ending with ~all or -all.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "SPF TXT record present",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IT Act s43A reasonable practices. DPDP not yet in force. Not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "TLS_CERT_INVALID",
+      "finding_name": "Invalid or Expired TLS Certificate",
+      "category": "tls",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "shallow",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "The site's TLS certificate is invalid, untrusted or expired.",
+          "technical_risk": "Data in transit may be interceptable; browser warnings erode trust.",
+          "business_impacts": [
+            "loss of customer trust",
+            "transactions blocked",
+            "reputational harm"
+          ],
+          "governance_impact": "No certificate/asset-lifecycle management.",
+          "director_or_management_context": "May be relevant to director oversight where customer data is collected.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "Insecure transmission may indicate APP 11 'reasonable steps' are not met (if personal information is collected).",
+          "penalty_context": "Indicative only; see AU-PRIV-PENALTY.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "nist_csf_2_0": [
+              "PR.DS"
+            ],
+            "cis_v8": [
+              "3"
+            ],
+            "pci_dss_4_0_1": [
+              "Req 4 (if cardholder data)"
+            ]
+          },
+          "recommended_remediation": "Reissue/renew a valid certificate from a trusted CA and automate renewal.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "valid certificate served",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 (Privacy Act 1988) where personal information is collected. Not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "The site's TLS certificate is invalid, untrusted or expired.",
+          "technical_risk": "Data in transit may be interceptable.",
+          "business_impacts": [
+            "loss of customer trust",
+            "transactions blocked"
+          ],
+          "governance_impact": "No certificate-lifecycle management.",
+          "director_or_management_context": "May be relevant to director care duties.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "May indicate reasonable safeguards under IPP 5 are not in place.",
+          "penalty_context": "No fixed penalty. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Reissue/renew a valid certificate and automate renewal.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "valid certificate served",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 (Privacy Act 2020). Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "The site's TLS certificate is invalid, untrusted or expired.",
+          "technical_risk": "Data in transit may be interceptable.",
+          "business_impacts": [
+            "loss of trust",
+            "transactions blocked"
+          ],
+          "governance_impact": "No certificate-lifecycle management.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a gap against PDPL security obligations (onshore UAE).",
+          "penalty_context": "PDPL Executive Regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Reissue/renew a valid certificate and automate renewal.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "valid certificate served",
+            "re-scan pass"
+          ],
+          "legal_wording": "This provision may be relevant depending on circumstances; PDPL regulations pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "The site's TLS certificate is invalid, untrusted or expired.",
+          "technical_risk": "Data in transit may be interceptable.",
+          "business_impacts": [
+            "loss of trust",
+            "transactions blocked"
+          ],
+          "governance_impact": "No certificate-lifecycle management.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "May indicate reasonable security practices under IT Act s43A/SPDI are not met.",
+          "penalty_context": "s43A compensation (in force); DPDP forthcoming. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Reissue/renew a valid certificate and automate renewal.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "valid certificate served",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IT Act s43A reasonable practices. Not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "HDR_SECURITY_HEADERS_MISSING",
+      "finding_name": "Missing HTTP Security Headers",
+      "category": "website_security",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "shallow",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "One or more of HSTS, CSP, X-Content-Type-Options, X-Frame-Options are absent.",
+          "technical_risk": "Weaker defence against clickjacking, MIME-sniffing and downgrade attacks.",
+          "business_impacts": [
+            "increased web-attack exposure"
+          ],
+          "governance_impact": "No web-hardening baseline/policy.",
+          "director_or_management_context": "Hygiene control; limited director relevance in isolation.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "Control weakness, not a breach; contributes to the APP 11 'reasonable steps' picture.",
+          "penalty_context": "Not applicable in isolation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.9",
+              "A.8.23"
+            ],
+            "nist_csf_2_0": [
+              "PR.PS"
+            ],
+            "cis_v8": [
+              "4"
+            ]
+          },
+          "recommended_remediation": "Add HSTS, CSP, X-Content-Type-Options=nosniff, X-Frame-Options/ frame-ancestors, plus Referrer-Policy and Permissions-Policy.",
+          "priority": "low",
+          "target_days": 90,
+          "closure_evidence": [
+            "response headers present",
+            "re-scan pass"
+          ],
+          "legal_wording": "This is a hardening gap that may contribute to an APP 11 'reasonable steps' assessment. Guidance-based prioritisation. Not legal advice.",
+          "source_references": [
+            "OWASP Secure Headers Project"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "One or more of HSTS, CSP, X-Content-Type-Options, X-Frame-Options are absent.",
+          "technical_risk": "Weaker defence against clickjacking, MIME-sniffing and downgrade attacks.",
+          "business_impacts": [
+            "increased web-attack exposure"
+          ],
+          "governance_impact": "No web-hardening baseline.",
+          "director_or_management_context": "Hygiene control; limited director relevance in isolation.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "Control weakness contributing to the IPP 5 reasonable-safeguards picture.",
+          "penalty_context": "Not applicable in isolation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.9",
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "4"
+            ]
+          },
+          "recommended_remediation": "Add the standard security headers plus Referrer-Policy and Permissions-Policy.",
+          "priority": "low",
+          "target_days": 90,
+          "closure_evidence": [
+            "response headers present",
+            "re-scan pass"
+          ],
+          "legal_wording": "This is a hardening gap relevant to IPP 5 reasonable safeguards. Not legal advice.",
+          "source_references": [
+            "OWASP Secure Headers Project"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "One or more standard HTTP security headers are absent.",
+          "technical_risk": "Weaker web-attack defences.",
+          "business_impacts": [
+            "increased web-attack exposure"
+          ],
+          "governance_impact": "No web-hardening baseline.",
+          "director_or_management_context": "Hygiene control.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "Control weakness contributing to PDPL security-measures expectations (onshore UAE).",
+          "penalty_context": "PDPL regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.9",
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "4"
+            ]
+          },
+          "recommended_remediation": "Add the standard security headers.",
+          "priority": "low",
+          "target_days": 90,
+          "closure_evidence": [
+            "response headers present",
+            "re-scan pass"
+          ],
+          "legal_wording": "Guidance-based hardening; PDPL relevance depends on circumstances. Not legal advice.",
+          "source_references": [
+            "OWASP Secure Headers Project"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "One or more standard HTTP security headers are absent.",
+          "technical_risk": "Weaker web-attack defences.",
+          "business_impacts": [
+            "increased web-attack exposure"
+          ],
+          "governance_impact": "No web-hardening baseline.",
+          "director_or_management_context": "Hygiene control.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "Control weakness contributing to reasonable security practices under IT Act s43A/SPDI.",
+          "penalty_context": "Not applicable in isolation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.9",
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "4"
+            ]
+          },
+          "recommended_remediation": "Add the standard security headers.",
+          "priority": "low",
+          "target_days": 90,
+          "closure_evidence": [
+            "response headers present",
+            "re-scan pass"
+          ],
+          "legal_wording": "Guidance-based hardening relevant to IT Act s43A. Not legal advice.",
+          "source_references": [
+            "OWASP Secure Headers Project"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "SOFTWARE_OUTDATED",
+      "finding_name": "Outdated or Vulnerable Software",
+      "category": "vulnerability",
+      "current_scanner": "device_scan.py",
+      "implementation_status": "shallow",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "Disclosed software (e.g. PHP major version) is outdated / unsupported. Note: current detection is banner heuristic, not CVE/CVSS.",
+          "technical_risk": "Known-vulnerable components are common ransomware/exploit entry points.",
+          "business_impacts": [
+            "compromise",
+            "ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No patch/vulnerability-management process.",
+          "director_or_management_context": "Patch governance may be relevant to director oversight duties.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)",
+            "Corporations Act 2001 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11",
+            "AU-CORP-180"
+          ],
+          "regulatory_relevance": "Failure to patch may indicate 'reasonable steps' under APP 11 are not met and may bear on director duties.",
+          "penalty_context": "Indicative only; see AU-PRIV-PENALTY.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.8"
+            ],
+            "nist_csf_2_0": [
+              "ID.RA",
+              "PR.PS"
+            ],
+            "cis_v8": [
+              "7"
+            ],
+            "essential_eight": [
+              "patch applications",
+              "patch operating systems"
+            ]
+          },
+          "recommended_remediation": "Upgrade to a supported version and establish a regular patch cycle.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "supported version confirmed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 and may be relevant to director duties under s180. Not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11",
+            "ASIC v RI Advice"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "Disclosed software is outdated / unsupported (banner heuristic).",
+          "technical_risk": "Known-vulnerable components enable compromise.",
+          "business_impacts": [
+            "compromise",
+            "ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No patch-management process.",
+          "director_or_management_context": "Patch governance may be relevant to director care duties.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)",
+            "Companies Act 1993 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5",
+            "NZ-CO-137"
+          ],
+          "regulatory_relevance": "May indicate IPP 5 reasonable safeguards are not met; may bear on director duties.",
+          "penalty_context": "No fixed penalty. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.8"
+            ],
+            "cis_v8": [
+              "7"
+            ],
+            "essential_eight": [
+              "patch applications"
+            ]
+          },
+          "recommended_remediation": "Upgrade to a supported version and establish a patch cycle.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "supported version confirmed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 and may be relevant to director duties. Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "Disclosed software is outdated / unsupported (banner heuristic).",
+          "technical_risk": "Known-vulnerable components enable compromise.",
+          "business_impacts": [
+            "compromise",
+            "ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No patch-management process.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a gap against PDPL security obligations (onshore UAE).",
+          "penalty_context": "PDPL regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.8"
+            ],
+            "cis_v8": [
+              "7"
+            ]
+          },
+          "recommended_remediation": "Upgrade to a supported version and establish a patch cycle.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "supported version confirmed",
+            "re-scan pass"
+          ],
+          "legal_wording": "PDPL relevance depends on circumstances; regulations pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "Disclosed software is outdated / unsupported (banner heuristic).",
+          "technical_risk": "Known-vulnerable components enable compromise.",
+          "business_impacts": [
+            "compromise",
+            "ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No patch-management process.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "May indicate reasonable security practices under IT Act s43A are not met.",
+          "penalty_context": "s43A compensation (in force). Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.8"
+            ],
+            "cis_v8": [
+              "7"
+            ]
+          },
+          "recommended_remediation": "Upgrade to a supported version and establish a patch cycle.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "supported version confirmed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IT Act s43A reasonable practices. Not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "BREACH_EMAIL_EXPOSED",
+      "finding_name": "Email/Credential Found in Data Breach",
+      "category": "breach_exposure",
+      "current_scanner": "darkweb_scan.py,hibp_watch.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "Business email addresses (and possibly credentials) appear in third-party breach corpora (HIBP).",
+          "technical_risk": "Credential stuffing / account takeover from reused passwords.",
+          "business_impacts": [
+            "account takeover",
+            "BEC",
+            "fraud"
+          ],
+          "governance_impact": "No credential-hygiene / awareness programme.",
+          "director_or_management_context": "Where the organisation's own personal data is exposed, incident oversight may be relevant to director duties.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11",
+            "AU-PRIV-NDB"
+          ],
+          "regulatory_relevance": "If the organisation's own systems/data are actually compromised, the NDB scheme may be engaged; third-party breach appearance alone may not establish this.",
+          "penalty_context": "Indicative only; see AU-PRIV-PENALTY.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "nist_csf_2_0": [
+              "PR.AA",
+              "RS.MA"
+            ],
+            "cis_v8": [
+              "6"
+            ]
+          },
+          "recommended_remediation": "Force password resets for affected accounts, enforce MFA, and monitor for reuse.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "password reset log",
+            "MFA enforced",
+            "no active reuse"
+          ],
+          "legal_wording": "If personal information was actually exposed, this may give rise to a notification obligation under the NDB scheme. Whether it does depends on the facts - seek advice before notifying. Not legal advice.",
+          "source_references": [
+            "OAIC Data Breach guide"
+          ],
+          "effective_date": "2018-02-22",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "Business email addresses appear in third-party breach corpora (HIBP).",
+          "technical_risk": "Credential stuffing / account takeover.",
+          "business_impacts": [
+            "account takeover",
+            "BEC",
+            "fraud"
+          ],
+          "governance_impact": "No credential-hygiene / awareness programme.",
+          "director_or_management_context": "Incident oversight may be relevant to director duties where own data is exposed.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5",
+            "NZ-PRIV-NOTIF"
+          ],
+          "regulatory_relevance": "If a privacy breach likely to cause serious harm has occurred, notification 'as soon as practicable' may be required. There is no fixed 72-hour deadline.",
+          "penalty_context": "No fixed monetary penalty. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "cis_v8": [
+              "6"
+            ]
+          },
+          "recommended_remediation": "Force password resets, enforce MFA, monitor for reuse.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "password reset log",
+            "MFA enforced"
+          ],
+          "legal_wording": "If a notifiable privacy breach likely to cause serious harm has occurred, notify the Privacy Commissioner and affected individuals as soon as practicable. Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) Part 6"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "Business email addresses appear in third-party breach corpora (HIBP).",
+          "technical_risk": "Credential stuffing / account takeover.",
+          "business_impacts": [
+            "account takeover",
+            "BEC",
+            "fraud"
+          ],
+          "governance_impact": "No credential-hygiene programme.",
+          "director_or_management_context": "May be relevant to management oversight where own data is exposed.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC",
+            "AE-PDPL-BREACH"
+          ],
+          "regulatory_relevance": "If the organisation's own personal data is breached, PDPL breach-notification may apply once Executive Regulations are operative.",
+          "penalty_context": "PDPL regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "cis_v8": [
+              "6"
+            ]
+          },
+          "recommended_remediation": "Force password resets, enforce MFA, monitor for reuse.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "password reset log",
+            "MFA enforced"
+          ],
+          "legal_wording": "A notification obligation may arise under the PDPL if personal data was actually exposed; implementing regulations are pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "Business email addresses appear in third-party breach corpora (HIBP).",
+          "technical_risk": "Credential stuffing / account takeover.",
+          "business_impacts": [
+            "account takeover",
+            "BEC",
+            "fraud"
+          ],
+          "governance_impact": "No credential-hygiene programme.",
+          "director_or_management_context": "May be relevant to management oversight where own data is exposed.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011",
+            "CERT-In Directions 2022"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A",
+            "IN-CERTIN"
+          ],
+          "regulatory_relevance": "A qualifying cyber incident may require CERT-In reporting within 6 hours (in force). DPDP breach duties are forthcoming.",
+          "penalty_context": "s43A compensation; CERT-In non-compliance consequences. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "cis_v8": [
+              "6"
+            ]
+          },
+          "recommended_remediation": "Force password resets, enforce MFA, monitor for reuse; assess CERT-In reportability.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "password reset log",
+            "MFA enforced"
+          ],
+          "legal_wording": "A qualifying incident may require reporting to CERT-In within 6 hours. The DPDP Act 2023 is not yet in force. Not legal advice.",
+          "source_references": [
+            "CERT-In Direction 20(3)/2022",
+            "IT Act 2000 s43A"
+          ],
+          "effective_date": "2022-06-28",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "CLOUD_STORAGE_PUBLIC",
+      "finding_name": "Publicly Accessible Cloud Storage",
+      "category": "data_exposure",
+      "current_scanner": "cloud_scan.py",
+      "implementation_status": "shallow",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "A cloud storage bucket resolves as publicly readable (heuristic S3 name check).",
+          "technical_risk": "Anyone on the internet may read/download stored files.",
+          "business_impacts": [
+            "data breach",
+            "regulatory exposure",
+            "reputational harm"
+          ],
+          "governance_impact": "No data-classification / cloud-security policy.",
+          "director_or_management_context": "A significant data-exposure event may be relevant to director oversight duties.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)",
+            "Corporations Act 2001 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11",
+            "AU-PRIV-NDB",
+            "AU-CORP-180"
+          ],
+          "regulatory_relevance": "If the exposed data includes personal information, this may be an eligible data breach engaging the NDB scheme.",
+          "penalty_context": "Indicative only; see AU-PRIV-PENALTY.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.12",
+              "A.5.15"
+            ],
+            "nist_csf_2_0": [
+              "PR.DS",
+              "PR.AA"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Make the bucket private, review access policies, and rotate any exposed data/keys.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "bucket set private",
+            "access logs reviewed",
+            "re-scan pass"
+          ],
+          "legal_wording": "If personal information was exposed, this may give rise to a notification obligation under the NDB scheme; whether it does depends on the facts. Not legal advice.",
+          "source_references": [
+            "OAIC Data Breach guide"
+          ],
+          "effective_date": "2018-02-22",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "A cloud storage bucket resolves as publicly readable (heuristic).",
+          "technical_risk": "Public read/download of stored files.",
+          "business_impacts": [
+            "data breach",
+            "regulatory exposure"
+          ],
+          "governance_impact": "No data-classification policy.",
+          "director_or_management_context": "May be relevant to director duties.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)",
+            "Companies Act 1993 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5",
+            "NZ-PRIV-NOTIF",
+            "NZ-CO-137"
+          ],
+          "regulatory_relevance": "If personal information is exposed and serious harm is likely, notification 'as soon as practicable' may be required.",
+          "penalty_context": "No fixed penalty. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.12",
+              "A.5.15"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Make the bucket private, review access, rotate exposed data.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "bucket set private",
+            "re-scan pass"
+          ],
+          "legal_wording": "If a notifiable privacy breach likely to cause serious harm has occurred, notify as soon as practicable. Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) Part 6"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "A cloud storage bucket resolves as publicly readable (heuristic).",
+          "technical_risk": "Public read/download of stored files.",
+          "business_impacts": [
+            "data breach",
+            "regulatory exposure"
+          ],
+          "governance_impact": "No data-classification policy.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC",
+            "AE-PDPL-BREACH"
+          ],
+          "regulatory_relevance": "If personal data is exposed, PDPL security and breach obligations may be engaged (onshore UAE).",
+          "penalty_context": "PDPL regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.12",
+              "A.5.15"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Make the bucket private, review access, rotate exposed data.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "bucket set private",
+            "re-scan pass"
+          ],
+          "legal_wording": "PDPL security/breach obligations may be relevant if personal data was exposed; regulations pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "A cloud storage bucket resolves as publicly readable (heuristic).",
+          "technical_risk": "Public read/download of stored files.",
+          "business_impacts": [
+            "data breach",
+            "regulatory exposure"
+          ],
+          "governance_impact": "No data-classification policy.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011",
+            "CERT-In Directions 2022"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A",
+            "IN-CERTIN"
+          ],
+          "regulatory_relevance": "A qualifying incident may require CERT-In reporting within 6 hours; s43A reasonable-practices gap may arise. DPDP forthcoming.",
+          "penalty_context": "s43A compensation; CERT-In consequences. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.12",
+              "A.5.15"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Make the bucket private, review access, rotate exposed data; assess CERT-In reportability.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "bucket set private",
+            "re-scan pass"
+          ],
+          "legal_wording": "A qualifying incident may require CERT-In reporting within 6 hours. DPDP not yet in force. Not legal advice.",
+          "source_references": [
+            "CERT-In Direction 20(3)/2022",
+            "IT Act 2000 s43A"
+          ],
+          "effective_date": "2022-06-28",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "PORT_RDP_EXPOSED",
+      "finding_name": "Exposed Remote Desktop (RDP) Service",
+      "category": "attack_surface",
+      "current_scanner": "network_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "TCP/3389 (RDP) appears internet-exposed (passive Shodan data).",
+          "technical_risk": "RDP is a primary ransomware entry point via brute force and known exploits.",
+          "business_impacts": [
+            "ransomware",
+            "full compromise",
+            "downtime"
+          ],
+          "governance_impact": "No network-security/firewall management process.",
+          "director_or_management_context": "Exposed high-risk services may be relevant to director oversight duties.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)",
+            "Corporations Act 2001 (Cth)",
+            "Cyber Security Act 2024 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11",
+            "AU-CORP-180",
+            "AU-CYBER-RANSOM"
+          ],
+          "regulatory_relevance": "Exposure may indicate APP 11 'reasonable steps' are not met; if a ransomware payment is later made, reporting may apply to covered entities only.",
+          "penalty_context": "Indicative only; ransomware-reporting applies to covered entities.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.20",
+              "A.8.9"
+            ],
+            "nist_csf_2_0": [
+              "PR.AA",
+              "PR.IR"
+            ],
+            "cis_v8": [
+              "4",
+              "12"
+            ],
+            "essential_eight": [
+              "restrict admin",
+              "patch operating systems"
+            ]
+          },
+          "recommended_remediation": "Remove RDP from the internet; require VPN/zero-trust access and MFA; restrict by IP.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "port not internet-reachable",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 and may be relevant to director duties. Ransomware-payment reporting applies only to covered entities. Not legal advice.",
+          "source_references": [
+            "ACSC ransomware guidance",
+            "OAIC APP Guidelines Ch 11"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "TCP/3389 (RDP) appears internet-exposed (passive Shodan data).",
+          "technical_risk": "Primary ransomware entry point.",
+          "business_impacts": [
+            "ransomware",
+            "compromise",
+            "downtime"
+          ],
+          "governance_impact": "No network-security process.",
+          "director_or_management_context": "May be relevant to director care duties.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)",
+            "Companies Act 1993 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5",
+            "NZ-CO-137"
+          ],
+          "regulatory_relevance": "Exposure may indicate IPP 5 reasonable safeguards are not met and may bear on director duties.",
+          "penalty_context": "No fixed penalty. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.20",
+              "A.8.9"
+            ],
+            "cis_v8": [
+              "4",
+              "12"
+            ],
+            "essential_eight": [
+              "restrict admin"
+            ]
+          },
+          "recommended_remediation": "Remove RDP from the internet; require VPN and MFA.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "port not internet-reachable",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 and may be relevant to director duties. Not legal advice.",
+          "source_references": [
+            "NZ NCSC network guidance"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "TCP/3389 (RDP) appears internet-exposed (passive Shodan data).",
+          "technical_risk": "Primary ransomware entry point.",
+          "business_impacts": [
+            "ransomware",
+            "compromise",
+            "downtime"
+          ],
+          "governance_impact": "No network-security process.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a gap against PDPL security obligations (onshore UAE).",
+          "penalty_context": "PDPL regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.20",
+              "A.8.9"
+            ],
+            "cis_v8": [
+              "4",
+              "12"
+            ]
+          },
+          "recommended_remediation": "Remove RDP from the internet; require VPN and MFA.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "port not internet-reachable",
+            "re-scan pass"
+          ],
+          "legal_wording": "PDPL security relevance depends on circumstances; regulations pending. Not legal advice.",
+          "source_references": [
+            "UAE IA Regulation"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "TCP/3389 (RDP) appears internet-exposed (passive Shodan data).",
+          "technical_risk": "Primary ransomware entry point.",
+          "business_impacts": [
+            "ransomware",
+            "compromise",
+            "downtime"
+          ],
+          "governance_impact": "No network-security process.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011",
+            "CERT-In Directions 2022"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A",
+            "IN-CERTIN"
+          ],
+          "regulatory_relevance": "May indicate reasonable security practices under IT Act s43A are not met; a resulting incident may require CERT-In reporting.",
+          "penalty_context": "s43A compensation; CERT-In consequences. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.20",
+              "A.8.9"
+            ],
+            "cis_v8": [
+              "4",
+              "12"
+            ]
+          },
+          "recommended_remediation": "Remove RDP from the internet; require VPN and MFA.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "port not internet-reachable",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IT Act s43A; a resulting incident may require CERT-In reporting. Not legal advice.",
+          "source_references": [
+            "CERT-In Direction 20(3)/2022"
+          ],
+          "effective_date": "2022-06-28",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "M365_MFA_GAP",
+      "finding_name": "Microsoft 365 MFA Not Enforced",
+      "category": "cloud_posture",
+      "current_scanner": "ms365_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "One or more M365 users are not registered for MFA (Graph report).",
+          "technical_risk": "Password-only accounts are vulnerable to takeover and BEC.",
+          "business_impacts": [
+            "account takeover",
+            "BEC",
+            "data access"
+          ],
+          "governance_impact": "No access-control/authentication policy.",
+          "director_or_management_context": "Identity-control weaknesses may be relevant to director oversight duties.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "Missing MFA may indicate 'reasonable steps' under APP 11 are not met.",
+          "penalty_context": "Indicative only; see AU-PRIV-PENALTY.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "nist_csf_2_0": [
+              "PR.AA"
+            ],
+            "cis_v8": [
+              "6"
+            ],
+            "essential_eight": [
+              "multi-factor authentication"
+            ]
+          },
+          "recommended_remediation": "Enforce MFA/conditional access for all users; prioritise admins.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "MFA registration report clean",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 (Privacy Act 1988). Not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11",
+            "ACSC MFA guidance"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "One or more M365 users are not registered for MFA.",
+          "technical_risk": "Account takeover / BEC.",
+          "business_impacts": [
+            "account takeover",
+            "BEC"
+          ],
+          "governance_impact": "No access-control policy.",
+          "director_or_management_context": "May be relevant to director care duties.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "May indicate IPP 5 reasonable safeguards are not fully in place.",
+          "penalty_context": "No fixed penalty. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "cis_v8": [
+              "6"
+            ],
+            "essential_eight": [
+              "multi-factor authentication"
+            ]
+          },
+          "recommended_remediation": "Enforce MFA/conditional access; prioritise admins.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "MFA registration report clean",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 (Privacy Act 2020). Not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "One or more M365 users are not registered for MFA.",
+          "technical_risk": "Account takeover / BEC.",
+          "business_impacts": [
+            "account takeover",
+            "BEC"
+          ],
+          "governance_impact": "No access-control policy.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a gap against PDPL security obligations (onshore UAE).",
+          "penalty_context": "PDPL regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "cis_v8": [
+              "6"
+            ]
+          },
+          "recommended_remediation": "Enforce MFA/conditional access; prioritise admins.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "MFA registration report clean",
+            "re-scan pass"
+          ],
+          "legal_wording": "PDPL relevance depends on circumstances; regulations pending. Not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "One or more M365 users are not registered for MFA.",
+          "technical_risk": "Account takeover / BEC.",
+          "business_impacts": [
+            "account takeover",
+            "BEC"
+          ],
+          "governance_impact": "No access-control policy.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "May indicate reasonable security practices under IT Act s43A are not met.",
+          "penalty_context": "s43A compensation (in force). Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.17",
+              "A.8.5"
+            ],
+            "cis_v8": [
+              "6"
+            ]
+          },
+          "recommended_remediation": "Enforce MFA/conditional access; prioritise admins.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "MFA registration report clean",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IT Act s43A reasonable practices. Not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "TI_TYPOSQUAT",
+      "finding_name": "Typosquatting / Look-alike Domain Registered",
+      "category": "attack_surface",
+      "current_scanner": "threat_intel_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "A look-alike domain resolves in DNS (heuristic; DNS resolution treated as 'registered').",
+          "technical_risk": "May be used for phishing or brand impersonation of customers/staff.",
+          "business_impacts": [
+            "brand impersonation",
+            "customer phishing",
+            "fraud"
+          ],
+          "governance_impact": "No brand/impersonation monitoring process.",
+          "director_or_management_context": "Limited direct director relevance unless active fraud occurs.",
+          "applicable_laws": [
+            "Australian Consumer Law"
+          ],
+          "applicable_clauses": [
+            "AU-ACL"
+          ],
+          "regulatory_relevance": "Primarily a brand/consumer-protection and fraud risk rather than a privacy obligation; ACL may be relevant if third parties deceive consumers.",
+          "penalty_context": "Not a direct penalty on the organisation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.7"
+            ],
+            "nist_csf_2_0": [
+              "ID.RA",
+              "DE.CM"
+            ]
+          },
+          "recommended_remediation": "Monitor and, where warranted, pursue takedown/registration of key variants; warn staff/customers.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "monitoring in place",
+            "takedown where applicable"
+          ],
+          "legal_wording": "This is a brand and fraud risk. Consumer-protection provisions may be relevant depending on how a third party uses the domain. Not legal advice.",
+          "source_references": [
+            "ACCC scam guidance"
+          ],
+          "effective_date": "2011-01-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "A look-alike domain resolves in DNS (heuristic).",
+          "technical_risk": "Phishing / brand impersonation.",
+          "business_impacts": [
+            "brand impersonation",
+            "customer phishing",
+            "fraud"
+          ],
+          "governance_impact": "No impersonation-monitoring process.",
+          "director_or_management_context": "Limited direct director relevance unless active fraud occurs.",
+          "applicable_laws": [
+            "Fair Trading Act 1986 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-NCSC"
+          ],
+          "regulatory_relevance": "Primarily a brand/fraud risk; consumer-protection law may be relevant to a third party's misuse.",
+          "penalty_context": "Not a direct penalty on the organisation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.7"
+            ],
+            "nist_csf_2_0": [
+              "ID.RA",
+              "DE.CM"
+            ]
+          },
+          "recommended_remediation": "Monitor and pursue takedown where warranted; warn staff/customers.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "monitoring in place"
+          ],
+          "legal_wording": "This is a brand and fraud risk. Guidance-based monitoring recommended. Not legal advice.",
+          "source_references": [
+            "NZ NCSC guidance"
+          ],
+          "effective_date": "current",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "A look-alike domain resolves in DNS (heuristic).",
+          "technical_risk": "Phishing / brand impersonation.",
+          "business_impacts": [
+            "brand impersonation",
+            "customer phishing",
+            "fraud"
+          ],
+          "governance_impact": "No impersonation-monitoring process.",
+          "director_or_management_context": "Limited direct director relevance unless active fraud occurs.",
+          "applicable_laws": [
+            "UAE Information Assurance Regulation"
+          ],
+          "applicable_clauses": [
+            "AE-IA"
+          ],
+          "regulatory_relevance": "Primarily a brand/fraud risk; sector IA requirements may apply to covered entities.",
+          "penalty_context": "Not a direct penalty on the organisation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.7"
+            ],
+            "nist_csf_2_0": [
+              "DE.CM"
+            ]
+          },
+          "recommended_remediation": "Monitor and pursue takedown where warranted; warn staff/customers.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "monitoring in place"
+          ],
+          "legal_wording": "This is a brand and fraud risk. Sector IA requirements may apply to covered entities. Not legal advice.",
+          "source_references": [
+            "UAE IA Regulation"
+          ],
+          "effective_date": "current",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "A look-alike domain resolves in DNS (heuristic).",
+          "technical_risk": "Phishing / brand impersonation.",
+          "business_impacts": [
+            "brand impersonation",
+            "customer phishing",
+            "fraud"
+          ],
+          "governance_impact": "No impersonation-monitoring process.",
+          "director_or_management_context": "Limited direct director relevance unless active fraud occurs.",
+          "applicable_laws": [
+            "CERT-In Directions 2022"
+          ],
+          "applicable_clauses": [
+            "IN-CERTIN"
+          ],
+          "regulatory_relevance": "Primarily a brand/fraud risk; a resulting phishing incident may be CERT-In reportable.",
+          "penalty_context": "Not a direct penalty on the organisation. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.5.7"
+            ],
+            "nist_csf_2_0": [
+              "DE.CM"
+            ]
+          },
+          "recommended_remediation": "Monitor and pursue takedown where warranted; warn staff/customers.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "monitoring in place"
+          ],
+          "legal_wording": "This is a brand and fraud risk; a resulting incident may be CERT-In reportable. Not legal advice.",
+          "source_references": [
+            "CERT-In Direction 20(3)/2022"
+          ],
+          "effective_date": "2022-06-28",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "EMAIL_DKIM_MISSING",
+      "finding_name": "Missing DKIM (PROPOSED - not yet detected)",
+      "category": "email_security",
+      "current_scanner": null,
+      "implementation_status": "proposed",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "TO_AUTHOR - no DKIM selector detection implemented yet.",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "TO_AUTHOR"
+          ],
+          "governance_impact": "TO_AUTHOR",
+          "director_or_management_context": "TO_AUTHOR",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish a DKIM key and sign outbound mail.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "DKIM selector present",
+            "re-scan pass"
+          ],
+          "legal_wording": "TO_AUTHOR - use potential_compliance_gap template. Not legal advice.",
+          "source_references": [
+            "TO_AUTHOR"
+          ],
+          "effective_date": "TO_AUTHOR",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "TO_AUTHOR",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "TO_AUTHOR"
+          ],
+          "governance_impact": "TO_AUTHOR",
+          "director_or_management_context": "TO_AUTHOR",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish a DKIM key and sign outbound mail.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "DKIM selector present"
+          ],
+          "legal_wording": "TO_AUTHOR. Not legal advice.",
+          "source_references": [
+            "TO_AUTHOR"
+          ],
+          "effective_date": "TO_AUTHOR",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "TO_AUTHOR",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "TO_AUTHOR"
+          ],
+          "governance_impact": "TO_AUTHOR",
+          "director_or_management_context": "TO_AUTHOR",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "PDPL regulations pending.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish a DKIM key and sign outbound mail.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "DKIM selector present"
+          ],
+          "legal_wording": "TO_AUTHOR. Not legal advice.",
+          "source_references": [
+            "TO_AUTHOR"
+          ],
+          "effective_date": "TO_AUTHOR",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "TO_AUTHOR",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "TO_AUTHOR"
+          ],
+          "governance_impact": "TO_AUTHOR",
+          "director_or_management_context": "TO_AUTHOR",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.23"
+            ],
+            "cis_v8": [
+              "9"
+            ]
+          },
+          "recommended_remediation": "Publish a DKIM key and sign outbound mail.",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "DKIM selector present"
+          ],
+          "legal_wording": "TO_AUTHOR. Not legal advice.",
+          "source_references": [
+            "TO_AUTHOR"
+          ],
+          "effective_date": "TO_AUTHOR",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "GOV_NO_BACKUP",
+      "finding_name": "No Tested Backup / Ransomware Resilience (PROPOSED - not yet detected)",
+      "category": "governance",
+      "current_scanner": null,
+      "implementation_status": "proposed",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "TO_AUTHOR - not automatically detectable; requires attestation.",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "unrecoverable ransomware",
+            "prolonged downtime"
+          ],
+          "governance_impact": "No business-continuity/backup plan.",
+          "director_or_management_context": "Backup/continuity governance may be relevant to director duties.",
+          "applicable_laws": [
+            "Corporations Act 2001 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-CORP-180",
+            "AU-E8"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.13",
+              "A.5.30"
+            ],
+            "nist_csf_2_0": [
+              "RC.RP"
+            ],
+            "cis_v8": [
+              "11"
+            ],
+            "essential_eight": [
+              "regular backups"
+            ]
+          },
+          "recommended_remediation": "Implement and regularly test offline/immutable backups.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "tested restore evidence"
+          ],
+          "legal_wording": "Cyber-resilience oversight may be relevant to director duties. Essential Eight is guidance, not law. Not legal advice.",
+          "source_references": [
+            "ACSC Essential Eight"
+          ],
+          "effective_date": "current",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "TO_AUTHOR - requires attestation.",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "unrecoverable ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No business-continuity plan.",
+          "director_or_management_context": "May be relevant to director care duties.",
+          "applicable_laws": [
+            "Companies Act 1993 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-CO-137",
+            "NZ-NCSC"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.13",
+              "A.5.30"
+            ],
+            "cis_v8": [
+              "11"
+            ]
+          },
+          "recommended_remediation": "Implement and test offline/immutable backups.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "tested restore evidence"
+          ],
+          "legal_wording": "Resilience oversight may be relevant to director duties. Guidance-based. Not legal advice.",
+          "source_references": [
+            "NZ NCSC guidance"
+          ],
+          "effective_date": "current",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "TO_AUTHOR - requires attestation.",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "unrecoverable ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No business-continuity plan.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "UAE Information Assurance Regulation"
+          ],
+          "applicable_clauses": [
+            "AE-IA"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.13",
+              "A.5.30"
+            ],
+            "cis_v8": [
+              "11"
+            ]
+          },
+          "recommended_remediation": "Implement and test offline/immutable backups.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "tested restore evidence"
+          ],
+          "legal_wording": "Sector IA requirements may apply to covered entities. Not legal advice.",
+          "source_references": [
+            "UAE IA Regulation"
+          ],
+          "effective_date": "current",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "TO_AUTHOR - requires attestation.",
+          "technical_risk": "TO_AUTHOR",
+          "business_impacts": [
+            "unrecoverable ransomware",
+            "downtime"
+          ],
+          "governance_impact": "No business-continuity plan.",
+          "director_or_management_context": "May be relevant to management oversight.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A",
+            "IN-CERTIN"
+          ],
+          "regulatory_relevance": "TO_AUTHOR",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.13",
+              "A.5.30"
+            ],
+            "cis_v8": [
+              "11"
+            ]
+          },
+          "recommended_remediation": "Implement and test offline/immutable backups.",
+          "priority": "high",
+          "target_days": 7,
+          "closure_evidence": [
+            "tested restore evidence"
+          ],
+          "legal_wording": "Reasonable security practices under IT Act s43A may include resilience measures. Not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "TLS_CERT_EXPIRING",
+      "finding_name": "TLS Certificate Expiring Soon",
+      "category": "tls",
+      "current_scanner": "website_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "The site's TLS certificate expires within 30 days.",
+          "technical_risk": "If it lapses, data-in-transit protection fails and browsers warn visitors.",
+          "business_impacts": [
+            "service disruption",
+            "loss of customer trust"
+          ],
+          "governance_impact": "No certificate/asset-lifecycle management.",
+          "director_or_management_context": "May be relevant to management oversight where customer data is collected.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "May indicate a forthcoming gap against APP 11 (Privacy Act 1988) if not renewed before expiry (where personal information is collected).",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "nist_csf_2_0": [
+              "PR.DS"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Renew the certificate before expiry and automate renewal (e.g. ACME).",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "valid certificate with >30 days validity",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a forthcoming gap against APP 11 (Privacy Act 1988). A legal or compliance review may be required. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "The site's TLS certificate expires within 30 days.",
+          "technical_risk": "If it lapses, data-in-transit protection fails and browsers warn visitors.",
+          "business_impacts": [
+            "service disruption",
+            "loss of customer trust"
+          ],
+          "governance_impact": "No certificate/asset-lifecycle management.",
+          "director_or_management_context": "May be relevant to management oversight where customer data is collected.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "May indicate a forthcoming gap against IPP 5 (Privacy Act 2020) if not renewed before expiry (where personal information is collected).",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "nist_csf_2_0": [
+              "PR.DS"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Renew the certificate before expiry and automate renewal (e.g. ACME).",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "valid certificate with >30 days validity",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a forthcoming gap against IPP 5 (Privacy Act 2020). A legal or compliance review may be required. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "The site's TLS certificate expires within 30 days.",
+          "technical_risk": "If it lapses, data-in-transit protection fails and browsers warn visitors.",
+          "business_impacts": [
+            "service disruption",
+            "loss of customer trust"
+          ],
+          "governance_impact": "No certificate/asset-lifecycle management.",
+          "director_or_management_context": "May be relevant to management oversight where customer data is collected.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "May indicate a forthcoming gap against PDPL security obligations if not renewed before expiry (where personal information is collected).",
+          "penalty_context": "PDPL Executive Regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "nist_csf_2_0": [
+              "PR.DS"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Renew the certificate before expiry and automate renewal (e.g. ACME).",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "valid certificate with >30 days validity",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a forthcoming gap against PDPL security obligations. A legal or compliance review may be required. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "The site's TLS certificate expires within 30 days.",
+          "technical_risk": "If it lapses, data-in-transit protection fails and browsers warn visitors.",
+          "business_impacts": [
+            "service disruption",
+            "loss of customer trust"
+          ],
+          "governance_impact": "No certificate/asset-lifecycle management.",
+          "director_or_management_context": "May be relevant to management oversight where customer data is collected.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A"
+          ],
+          "regulatory_relevance": "May indicate a forthcoming gap against IT Act s43A reasonable practices if not renewed before expiry (where personal information is collected).",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.24"
+            ],
+            "nist_csf_2_0": [
+              "PR.DS"
+            ],
+            "cis_v8": [
+              "3"
+            ]
+          },
+          "recommended_remediation": "Renew the certificate before expiry and automate renewal (e.g. ACME).",
+          "priority": "medium",
+          "target_days": 30,
+          "closure_evidence": [
+            "valid certificate with >30 days validity",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a forthcoming gap against IT Act s43A reasonable practices. A legal or compliance review may be required. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    },
+    {
+      "finding_code": "MALWARE_BLACKLIST",
+      "finding_name": "Malware / Blacklist / Reputation Match",
+      "category": "threat_intel",
+      "current_scanner": "threat_intel_scan.py",
+      "implementation_status": "real",
+      "mappings": {
+        "AU": {
+          "country_code": "AU",
+          "technical_description": "The domain or a resolved IP matches malware, blacklist, or abuse-reputation feeds (VirusTotal / AbuseIPDB / URLScan / OTX).",
+          "technical_risk": "May indicate active compromise, malicious hosting, or reputation damage affecting deliverability and trust.",
+          "business_impacts": [
+            "reputation damage",
+            "email/service blocking",
+            "possible compromise"
+          ],
+          "governance_impact": "No threat-monitoring or incident-response process.",
+          "director_or_management_context": "A potential compromise may be relevant to director/management oversight duties.",
+          "applicable_laws": [
+            "Privacy Act 1988 (Cth)"
+          ],
+          "applicable_clauses": [
+            "AU-PRIV-APP11"
+          ],
+          "regulatory_relevance": "Reputation/malware signals may indicate compromise; if the organisation's own data is affected this may engage APP 11 (Privacy Act 1988).",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.7"
+            ],
+            "nist_csf_2_0": [
+              "DE.CM",
+              "RS.MA"
+            ],
+            "cis_v8": [
+              "10"
+            ]
+          },
+          "recommended_remediation": "Investigate the flagged asset, remove malware/compromise, request delisting, and monitor reputation.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "asset cleaned / delisted",
+            "incident review completed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against APP 11 (Privacy Act 1988) and may require a legal or compliance review if data was affected. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "OAIC APP Guidelines Ch 11"
+          ],
+          "effective_date": "2014-03-12",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "NZ": {
+          "country_code": "NZ",
+          "technical_description": "The domain or a resolved IP matches malware, blacklist, or abuse-reputation feeds (VirusTotal / AbuseIPDB / URLScan / OTX).",
+          "technical_risk": "May indicate active compromise, malicious hosting, or reputation damage affecting deliverability and trust.",
+          "business_impacts": [
+            "reputation damage",
+            "email/service blocking",
+            "possible compromise"
+          ],
+          "governance_impact": "No threat-monitoring or incident-response process.",
+          "director_or_management_context": "A potential compromise may be relevant to director/management oversight duties.",
+          "applicable_laws": [
+            "Privacy Act 2020 (NZ)"
+          ],
+          "applicable_clauses": [
+            "NZ-PRIV-IPP5"
+          ],
+          "regulatory_relevance": "Reputation/malware signals may indicate compromise; if the organisation's own data is affected this may engage IPP 5 (Privacy Act 2020).",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.7"
+            ],
+            "nist_csf_2_0": [
+              "DE.CM",
+              "RS.MA"
+            ],
+            "cis_v8": [
+              "10"
+            ]
+          },
+          "recommended_remediation": "Investigate the flagged asset, remove malware/compromise, request delisting, and monitor reputation.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "asset cleaned / delisted",
+            "incident review completed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IPP 5 (Privacy Act 2020) and may require a legal or compliance review if data was affected. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "Privacy Act 2020 (NZ) IPP 5"
+          ],
+          "effective_date": "2020-12-01",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "AE": {
+          "country_code": "AE",
+          "technical_description": "The domain or a resolved IP matches malware, blacklist, or abuse-reputation feeds (VirusTotal / AbuseIPDB / URLScan / OTX).",
+          "technical_risk": "May indicate active compromise, malicious hosting, or reputation damage affecting deliverability and trust.",
+          "business_impacts": [
+            "reputation damage",
+            "email/service blocking",
+            "possible compromise"
+          ],
+          "governance_impact": "No threat-monitoring or incident-response process.",
+          "director_or_management_context": "A potential compromise may be relevant to director/management oversight duties.",
+          "applicable_laws": [
+            "Federal Decree-Law No. 45 of 2021 (PDPL)"
+          ],
+          "applicable_clauses": [
+            "AE-PDPL-SEC"
+          ],
+          "regulatory_relevance": "Reputation/malware signals may indicate compromise; if the organisation's own data is affected this may engage PDPL security obligations.",
+          "penalty_context": "PDPL Executive Regulations pending. Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.7"
+            ],
+            "nist_csf_2_0": [
+              "DE.CM",
+              "RS.MA"
+            ],
+            "cis_v8": [
+              "10"
+            ]
+          },
+          "recommended_remediation": "Investigate the flagged asset, remove malware/compromise, request delisting, and monitor reputation.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "asset cleaned / delisted",
+            "incident review completed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against PDPL security obligations and may require a legal or compliance review if data was affected. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "UAE Federal Decree-Law No. 45 of 2021"
+          ],
+          "effective_date": "2022-01-02",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        },
+        "IN": {
+          "country_code": "IN",
+          "technical_description": "The domain or a resolved IP matches malware, blacklist, or abuse-reputation feeds (VirusTotal / AbuseIPDB / URLScan / OTX).",
+          "technical_risk": "May indicate active compromise, malicious hosting, or reputation damage affecting deliverability and trust.",
+          "business_impacts": [
+            "reputation damage",
+            "email/service blocking",
+            "possible compromise"
+          ],
+          "governance_impact": "No threat-monitoring or incident-response process.",
+          "director_or_management_context": "A potential compromise may be relevant to director/management oversight duties.",
+          "applicable_laws": [
+            "Information Technology Act 2000 + SPDI Rules 2011",
+            "CERT-In Directions 2022"
+          ],
+          "applicable_clauses": [
+            "IN-ITA-43A",
+            "IN-CERTIN"
+          ],
+          "regulatory_relevance": "A confirmed malware/compromise incident may require CERT-In reporting within 6 hours (in force); s43A reasonable-practices may also be relevant.",
+          "penalty_context": "Indicative only.",
+          "industry_framework_mappings": {
+            "iso_27001_2022": [
+              "A.8.7"
+            ],
+            "nist_csf_2_0": [
+              "DE.CM",
+              "RS.MA"
+            ],
+            "cis_v8": [
+              "10"
+            ]
+          },
+          "recommended_remediation": "Investigate the flagged asset, remove malware/compromise, request delisting, and monitor reputation.",
+          "priority": "critical",
+          "target_days": 0,
+          "closure_evidence": [
+            "asset cleaned / delisted",
+            "incident review completed",
+            "re-scan pass"
+          ],
+          "legal_wording": "This finding may indicate a gap against IT Act s43A reasonable practices and may require a legal or compliance review if data was affected. Regulatory intelligence, not legal advice.",
+          "source_references": [
+            "CERT-In Direction 20(3)/2022",
+            "IT Act 2000 s43A; SPDI Rules 2011"
+          ],
+          "effective_date": "2011-04-11",
+          "last_reviewed_date": "2026-07-21",
+          "review_owner": "Global Cyber Assurance - Compliance (pending external legal review)",
+          "confidence": "to_verify"
+        }
+      }
+    }
+  ],
+  "scanner_backed_finding_codes": [
+    "EMAIL_SPF_MISSING",
+    "EMAIL_DMARC_MISSING",
+    "TLS_CERT_INVALID",
+    "TLS_CERT_EXPIRING",
+    "HDR_SECURITY_HEADERS_MISSING",
+    "WEB_SERVER_DISCLOSURE",
+    "SOFTWARE_OUTDATED",
+    "BREACH_EMAIL_EXPOSED",
+    "CLOUD_STORAGE_PUBLIC",
+    "PORT_RDP_EXPOSED",
+    "MALWARE_BLACKLIST",
+    "TI_TYPOSQUAT"
+  ],
+  "resolver_aliases": {
+    "WEB_SERVER_DISCLOSURE": "SOFTWARE_OUTDATED"
+  }
+}

@@ -506,6 +506,9 @@ export default function DashboardPage() {
       })
       const data = await response.json()
       setDashboard(data)
+      // Country comes from the TRUSTED backend record (canonical AU/NZ/AE/IN or
+      // null when unsupported). Do not trust localStorage for regulatory display.
+      setCountry(data.country || '')
       if (data.logo_url) {
         setLogoUrl(data.logo_url)
         localStorage.setItem('logo_url', data.logo_url)
@@ -637,10 +640,10 @@ export default function DashboardPage() {
           { name: 'Essential Eight', score: compliance?.essential_eight ?? 0, detail: 'Mandatory for government, recommended all' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
-      case 'UAE':
+      case 'AE':
         return [
-          { name: 'UAE PDPL 2021', score: compliance?.uae_pdpl ?? 0, detail: 'Personal data protection - up to AED 5M' },
-          { name: 'UAE NESA Standards', score: compliance?.uae_nesa ?? 0, detail: 'National cybersecurity standards' },
+          { name: 'UAE PDPL 2021', score: compliance?.uae_pdpl ?? 0, detail: 'Federal Decree-Law 45/2021 - security obligations' },
+          { name: 'UAE NESA Standards', score: compliance?.uae_nesa ?? 0, detail: 'National cybersecurity standards (sector-gated)' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
       case 'IN':
@@ -649,33 +652,52 @@ export default function DashboardPage() {
           { name: 'CERT-In Guidelines 2022', score: compliance?.cert_in ?? 0, detail: 'Incident reporting within 6 hours' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
-      default:
+      case 'NZ':
         return [
-          { name: 'NZ Privacy Act 2020', score: compliance?.nz_privacy ?? 0, detail: 'Breach notification within 72 hours' },
-          { name: 'NZ Privacy Amendment 2025', score: compliance?.nz_privacy_amendment ?? 0, detail: 'IPP 3A - in force May 2026' },
+          { name: 'NZ Privacy Act 2020', score: compliance?.nz_privacy ?? 0, detail: 'Notify as soon as practicable (serious harm)' },
+          { name: 'NZ Privacy Amendment 2025', score: compliance?.nz_privacy_amendment ?? 0, detail: 'IPP 3A (verify effective date)' },
           { name: 'NZ Companies Act', score: compliance?.nz_companies ?? 0, detail: 'Director duty of care' },
-          { name: 'NZ NCSC Guidelines', score: compliance?.nz_ncsc ?? 0, detail: 'Baseline security controls' },
-          { name: 'Essential Eight', score: compliance?.essential_eight ?? 0, detail: '8 mitigation strategies' },
+          { name: 'NZ NCSC Guidelines', score: compliance?.nz_ncsc ?? 0, detail: 'Baseline security controls (guidance)' },
+          { name: 'Essential Eight', score: compliance?.essential_eight ?? 0, detail: '8 mitigation strategies (guidance)' },
           { name: 'ISO 27001', score: compliance?.iso_27001 ?? 0, detail: 'International security standard' },
         ]
+      default:
+        // Unknown/unsupported country: no silent NZ fallback.
+        return []
     }
   }
 
   const getCountryLabel = (country: string) => {
     switch(country) {
       case 'AU': return 'Australian regulations'
-      case 'UAE': return 'UAE regulations'
+      case 'AE': return 'UAE regulations'
       case 'IN': return 'Indian regulations'
-      default: return 'New Zealand regulations'
+      case 'NZ': return 'New Zealand regulations'
+      default: return 'Regulatory mapping unavailable'
     }
   }
 
-  const filterRegulations = (regulations: string[], country: string) => {
-    if (country === 'AU') return regulations.filter((r: string) => !r.startsWith('NZ'))
-    if (country === 'NZ') return regulations.filter((r: string) => !r.startsWith('AU'))
-    if (country === 'UAE') return regulations.filter((r: string) => r.startsWith('UAE') || r.startsWith('ISO'))
-    if (country === 'IN') return regulations.filter((r: string) => r.startsWith('India') || r.startsWith('CERT') || r.startsWith('ISO'))
-    return regulations
+  const legalStatusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      legislation: 'bg-red-900/40 text-red-300 border border-red-800',
+      regulation: 'bg-orange-900/40 text-orange-300 border border-orange-800',
+      binding_direction: 'bg-amber-900/40 text-amber-300 border border-amber-800',
+      sector_requirement: 'bg-purple-900/40 text-purple-300 border border-purple-800',
+      standard: 'bg-blue-900/40 text-blue-300 border border-blue-800',
+      guidance: 'bg-gray-700 text-gray-300 border border-gray-600',
+    }
+    return map[status] || 'bg-gray-700 text-gray-300 border border-gray-600'
+  }
+
+  const priorityChip = (p: string) => {
+    const map: Record<string, string> = {
+      critical: 'bg-red-900/50 text-red-300',
+      high: 'bg-orange-900/50 text-orange-300',
+      medium: 'bg-amber-900/50 text-amber-300',
+      low: 'bg-gray-700 text-gray-300',
+      informational: 'bg-gray-800 text-gray-400',
+    }
+    return map[p] || 'bg-gray-700 text-gray-300'
   }
 
   const isCarriedOver = (finding: any) => {
@@ -929,7 +951,19 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {dashboard?.ransom_score && (
+        {dashboard?.ransom_score && dashboard?.mapping_available === false && (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
+            <h3 className="text-white font-semibold mb-2">Regulatory Compliance</h3>
+            <p className="text-gray-400 text-sm">
+              Regulatory mapping is not available for your registered country. Supported regions are
+              Australia, New Zealand, the UAE and India. Please contact{' '}
+              <a href="mailto:governance@secureit360.co" className="underline">governance@secureit360.co</a>.
+              This is regulatory intelligence, not legal advice.
+            </p>
+          </div>
+        )}
+
+        {dashboard?.ransom_score && dashboard?.mapping_available !== false && regulations.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-white font-semibold">Regulatory Compliance</h3>
@@ -983,11 +1017,52 @@ export default function DashboardPage() {
                               </div>
                               <p className="text-gray-500 text-xs mt-1">{finding.description && finding.description.length > 200 ? `${finding.description.substring(0, 200)}...` : finding.description}</p>
                               {finding.governance_gap && <p className="text-gray-600 text-xs italic mt-2">{finding.governance_gap}</p>}
-                              {finding.regulations && finding.regulations.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {filterRegulations(finding.regulations, country).map((reg: string, i: number) => (
-                                    <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">{reg}</span>
-                                  ))}
+                              {finding.regulatory ? (
+                                <div className="mt-3 bg-gray-800/50 border border-gray-700 rounded-lg p-3 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-semibold text-gray-300">Regulatory intelligence</span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-300">{finding.regulatory.jurisdiction_label}</span>
+                                    {finding.regulatory.severity_priority && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${priorityChip(finding.regulatory.severity_priority)}`}>
+                                        {finding.regulatory.severity_priority} · target {finding.regulatory.target_days}d
+                                      </span>
+                                    )}
+                                  </div>
+                                  {finding.regulatory.business_impacts?.length > 0 && (
+                                    <p className="text-gray-400 text-xs"><span className="text-gray-500">Business impact:</span> {finding.regulatory.business_impacts.join(', ')}</p>
+                                  )}
+                                  {finding.regulatory.director_or_management_context && (
+                                    <p className="text-gray-400 text-xs"><span className="text-gray-500">Governance/director:</span> {finding.regulatory.director_or_management_context}</p>
+                                  )}
+                                  {finding.regulatory.applicable_clauses?.length > 0 && (
+                                    <div className="space-y-1.5">
+                                      {finding.regulatory.applicable_clauses.map((c: any, i: number) => (
+                                        <div key={i} className="text-xs">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`px-2 py-0.5 rounded-full ${legalStatusBadge(c.legal_status)}`}>{(c.legal_status || '').replace('_', ' ')}</span>
+                                            <span className="text-gray-300 font-medium">{c.law_name}</span>
+                                            <span className="text-gray-400">— {c.clause_reference}</span>
+                                            {c.enforcement_status && <span className="text-amber-400">({c.enforcement_status.replace(/_/g, ' ')})</span>}
+                                          </div>
+                                          {c.plain_english_summary && <p className="text-gray-500 mt-0.5">{c.plain_english_summary}</p>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {finding.regulatory.regulatory_relevance && (
+                                    <p className="text-gray-400 text-xs"><span className="text-gray-500">Relevance:</span> {finding.regulatory.regulatory_relevance}</p>
+                                  )}
+                                  {finding.regulatory.recommended_remediation && (
+                                    <p className="text-gray-400 text-xs"><span className="text-gray-500">Remediation:</span> {finding.regulatory.recommended_remediation}</p>
+                                  )}
+                                  {finding.regulatory.closure_evidence?.length > 0 && (
+                                    <p className="text-gray-400 text-xs"><span className="text-gray-500">Evidence to close:</span> {finding.regulatory.closure_evidence.join('; ')}</p>
+                                  )}
+                                  <p className="text-gray-600 text-[11px] italic">{finding.regulatory.disclaimer}</p>
+                                </div>
+                              ) : (
+                                <div className="mt-3 bg-gray-800/40 border border-gray-700 rounded-lg p-3">
+                                  <p className="text-gray-500 text-xs">Regulatory mapping is not available for your registered country. Regulatory intelligence, not legal advice.</p>
                                 </div>
                               )}
                               <FindingActionsBar

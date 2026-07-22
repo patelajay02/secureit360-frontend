@@ -17,14 +17,14 @@ export default function AuthConfirm() {
           return;
         }
 
-        const base64 = accessToken.split(".")[1];
-        const payload = JSON.parse(atob(base64));
-        const userId = payload.sub;
-
+        // The backend derives the user from the verified access token (Bearer),
+        // never from the request body - so we send the token, not a user_id.
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-email`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         });
 
         router.push("/login?verified=true");

@@ -100,8 +100,10 @@ async def run_cloud_scan(tenant_id: str, scan_id: str, domain: str):
                         f"view and download files stored there. This could include "
                         f"client records, financial documents, staff information or "
                         f"any other files your business has stored in the cloud. "
-                        f"This is a serious privacy breach under both NZ and AU privacy law "
-                        f"and must be reported to the relevant authority within 72 hours."
+                        f"If the exposed files contain personal information, this may "
+                        f"constitute a notifiable privacy breach and a legal or "
+                        f"compliance review may be required. Regulatory intelligence, "
+                        f"not legal advice."
                     ),
                     "No data classification or cloud security policy exists. Staff are storing sensitive business data in publicly accessible locations without awareness of the risk.",
                     [

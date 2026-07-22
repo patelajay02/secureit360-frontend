@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Header
 from services.database import supabase, supabase_admin
+from services.regulatory_intelligence import normalize_country, attach_to_finding
 
 router = APIRouter()
 
@@ -242,7 +243,7 @@ def get_penalty_info(findings: list, country: str) -> dict:
                 "disclaimer": DISCLAIMER
             }
 
-    elif country == "UAE":
+    elif country == "AE":
         if has_critical:
             return {
                 "ransom_demand": "AED 300K - 800K (indicative)",
@@ -417,7 +418,7 @@ def calculate_compliance_scores(findings: list, country: str, extra_frameworks: 
             "essential_eight": score_for_engines(["email", "devices", "network", "website", "microsoft365"]),
             "iso_27001": score_for_engines(_ALL_ENGINES),
         }
-    elif country in ("UAE", "AE"):
+    elif country == "AE":
         base = {
             "uae_pdpl": score_for_engines(["darkweb", "email", "cloud", "website", "microsoft365"]),
             "uae_nesa": score_for_engines(["network", "devices", "cloud", "microsoft365"]),
@@ -466,7 +467,16 @@ def get_dashboard(authorization: str = Header(...)):
         tenant_id = tenant_user.data["tenant_id"]
         company_name = tenant_user.data["tenants"]["name"]
         plan = tenant_user.data["tenants"].get("plan")
-        country = tenant_user.data["tenants"].get("country", "NZ") or "NZ"
+        # Country is taken ONLY from the trusted tenant record and normalised to a
+        # canonical code (AU/NZ/AE/IN). Unknown/unsupported -> None -> we fail
+        # closed and show a neutral "mapping unavailable" state (never a silent NZ
+        # fallback for regulations/penalties/labels).
+        raw_country = tenant_user.data["tenants"].get("country")
+        country = normalize_country(raw_country)
+        mapping_available = country is not None
+        # Applicability context. Free-zone (DIFC/ADGM) and sector flags are not
+        # collected yet, so gated clauses are excluded (fail closed).
+        reg_context = {}
         logo_url = tenant_user.data["tenants"].get("logo_url")
         status = tenant_user.data["tenants"].get("status", "trial")
         trial_ends_at = tenant_user.data["tenants"].get("trial_ends_at")
@@ -487,6 +497,8 @@ def get_dashboard(authorization: str = Header(...)):
                 "company_name": company_name,
                 "plan": plan,
                 "country": country,
+                "country_raw": raw_country,
+                "mapping_available": mapping_available,
                 "logo_url": logo_url,
             "status": status,
             "trial_ends_at": trial_ends_at,
@@ -508,11 +520,26 @@ def get_dashboard(authorization: str = Header(...)):
         director_liability_score = min(100, max(0,
             calculate_director_liability_score(scan_findings) + _saas_director_delta(saas_findings)
         ))
-        compliance = calculate_compliance_scores(scan_findings, country, extra_frameworks)
-        penalty_info = get_penalty_info(
-            scan_findings + _saas_penalty_proxy(saas_findings),
-            country,
-        )
+        # Country-specific legal content is only produced for a canonical country.
+        # Unknown/unsupported -> neutral "mapping unavailable" (no NZ fallback).
+        if mapping_available:
+            compliance = calculate_compliance_scores(scan_findings, country, extra_frameworks)
+            penalty_info = get_penalty_info(
+                scan_findings + _saas_penalty_proxy(saas_findings),
+                country,
+            )
+        else:
+            compliance = None
+            penalty_info = {
+                "mapping_unavailable": True,
+                "message": "Regulatory mapping is not available for your registered country. "
+                           "Please contact governance@secureit360.co.",
+                "disclaimer": DISCLAIMER,
+            }
+
+        # Enrich the top findings with resolved regulatory intelligence (or a
+        # neutral state) and sanitise any legacy definitive legal wording.
+        top_findings = [attach_to_finding(f, country, reg_context) for f in scan_findings[:5]]
 
         real_findings = [f for f in scan_findings if f.get("fix_type") != "info"]
         critical = [f for f in real_findings if f["severity"] == "critical"]
@@ -523,6 +550,8 @@ def get_dashboard(authorization: str = Header(...)):
             "company_name": company_name,
             "plan": plan,
             "country": country,
+            "country_raw": raw_country,
+            "mapping_available": mapping_available,
             "logo_url": logo_url,
             "status": status,
             "trial_ends_at": trial_ends_at,
@@ -535,7 +564,7 @@ def get_dashboard(authorization: str = Header(...)):
                 "low": len(low),
                 "total": len(real_findings)
             },
-            "top_findings": scan_findings[:5],
+            "top_findings": top_findings,
             "compliance": compliance,
             "penalty_info": penalty_info,
             "breach_watch": breach_watch,

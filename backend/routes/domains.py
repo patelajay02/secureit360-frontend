@@ -4,6 +4,7 @@
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from services.database import supabase, supabase_admin
+from services.rate_limit import enforce_rate_limit
 import hashlib
 import socket
 import dns.resolver
@@ -40,6 +41,8 @@ def add_domain(data: DomainRequest, authorization: str = Header(...)):
 
         tenant_id = tenant_user.data["tenant_id"]
         plan = tenant_user.data["tenants"]["plan"]
+
+        enforce_rate_limit(f"domain-add:{tenant_id}", 20, 3600)
 
         existing = supabase_admin.table("domains")\
             .select("id")\

@@ -1,13 +1,12 @@
 ﻿'use client'
 import { useState, useEffect } from 'react'
-
-const ADMIN_PASSWORD = 'SecureIT360Admin2026!'
-const API = process.env.NEXT_PUBLIC_API_URL
+import { authFetch } from '../../lib/auth'
 
 export default function AdminPage() {
-  const [authenticated, setAuthenticated] = useState(false)
-  const [password, setPassword] = useState('')
-  const [passwordError, setPasswordError] = useState('')
+  // Access is gated by SERVER-SIDE platform-admin authorisation (GET /auth/admin/me),
+  // not by any client-side password. 'checking' -> verifying token; 'authorized' /
+  // 'denied' set from the server response.
+  const [authState, setAuthState] = useState<'checking' | 'authorized' | 'denied'>('checking')
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -20,19 +19,27 @@ export default function AdminPage() {
   const [createLoading, setCreateLoading] = useState(false)
   const [extendDays, setExtendDays] = useState<Record<string, number>>({})
 
-  const handlePasswordSubmit = () => {
-    if (password === ADMIN_PASSWORD) {
-      setAuthenticated(true)
-      fetchUsers()
-    } else {
-      setPasswordError('Incorrect password.')
-    }
-  }
+  useEffect(() => {
+    // Verify platform-admin status server-side before showing anything.
+    (async () => {
+      try {
+        const res = await authFetch('/auth/admin/me')
+        if (res.ok) {
+          setAuthState('authorized')
+          fetchUsers()
+        } else {
+          setAuthState('denied')
+        }
+      } catch {
+        setAuthState('denied')
+      }
+    })()
+  }, [])
 
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/auth/admin/users`)
+      const res = await authFetch('/auth/admin/users')
       const data = await res.json()
       setUsers(data.users || [])
     } catch {
@@ -52,7 +59,7 @@ export default function AdminPage() {
     if (!confirm(`Delete ${email}? This cannot be undone.`)) return
     setActionLoading(userId + '_delete')
     try {
-      const res = await fetch(`${API}/auth/admin/delete/${userId}`, { method: 'DELETE' })
+      const res = await authFetch(`/auth/admin/delete/${userId}`, { method: 'DELETE' })
       if (res.ok) {
         showMessage(`${email} deleted successfully.`)
         setUsers(users.filter(u => u.user_id !== userId))
@@ -72,9 +79,8 @@ export default function AdminPage() {
     if (!confirm(`${isSuspended ? 'Unsuspend' : 'Suspend'} ${email}?`)) return
     setActionLoading(userId + '_suspend')
     try {
-      const res = await fetch(`${API}/auth/admin/suspend/${userId}`, {
+      const res = await authFetch(`/auth/admin/suspend/${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
       })
       if (res.ok) {
@@ -96,9 +102,8 @@ export default function AdminPage() {
     if (!confirm(`${isComped ? 'Revoke full access from' : 'Grant full access to'} ${email}?`)) return
     setActionLoading(userId + '_access')
     try {
-      const res = await fetch(`${API}/auth/admin/access/${userId}`, {
+      const res = await authFetch(`/auth/admin/access/${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
       })
       if (res.ok) {
@@ -119,9 +124,8 @@ export default function AdminPage() {
     if (!confirm(`Extend trial for ${email} by ${days} days?`)) return
     setActionLoading(userId + '_extend')
     try {
-      const res = await fetch(`${API}/auth/admin/extend-trial/${userId}`, {
+      const res = await authFetch(`/auth/admin/extend-trial/${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days })
       })
       if (res.ok) {
@@ -144,9 +148,8 @@ export default function AdminPage() {
     }
     setCreateLoading(true)
     try {
-      const res = await fetch(`${API}/auth/admin/create-account`, {
+      const res = await authFetch(`/auth/admin/create-account`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm)
       })
       const data = await res.json()
@@ -185,25 +188,26 @@ export default function AdminPage() {
     return matchSearch && matchStatus
   })
 
-  if (!authenticated) {
+  if (authState === 'checking') {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm">
+        <p className="text-gray-400 text-sm">Verifying access…</p>
+      </div>
+    )
+  }
+
+  if (authState === 'denied') {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm text-center">
           <h1 className="text-xl font-bold text-white mb-2">Admin Portal</h1>
           <p className="text-gray-500 text-sm mb-6">SecureIT360 — Global Cyber Assurance</p>
-          {passwordError && <p className="text-red-400 text-sm mb-4">{passwordError}</p>}
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-            placeholder="Admin password"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white mb-4 focus:outline-none focus:border-red-500"
-          />
-          <button onClick={handlePasswordSubmit}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg">
-            Sign in
-          </button>
+          <p className="text-red-400 text-sm mb-4">
+            You are not authorised to access this page. Platform-administrator access is required.
+          </p>
+          <a href="/login" className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg">
+            Go to login
+          </a>
         </div>
       </div>
     )

@@ -2,9 +2,9 @@
 # Checks for dangerous open ports with specific regulation clause references
 
 import os
-import socket
 import shodan
 from services.database import supabase_admin
+from services.target_guard import assert_scannable, TargetValidationError
 
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY")
 
@@ -127,10 +127,20 @@ async def run_network_scan(tenant_id: str, scan_id: str, domain: str):
         findings_count = 0
         api = shodan.Shodan(SHODAN_API_KEY)
 
+        # Validate the target and resolve it to a permitted PUBLIC IP only.
+        # Rejects localhost/private/link-local/metadata targets (SSRF guard).
         try:
-            ip_address = socket.gethostbyname(domain)
-        except socket.gaierror:
-            return {"status": "error", "message": f"Could not resolve domain {domain}"}
+            _normalized, validated_ips = assert_scannable(domain)
+            ip_address = validated_ips[0]
+        except TargetValidationError:
+            supabase_admin.table("scan_engine_results").upsert({
+                "tenant_id": tenant_id,
+                "scan_id": scan_id,
+                "engine": "network",
+                "status": "skipped",
+                "findings_count": 0
+            }).execute()
+            return {"status": "skipped", "message": "Target is not a permitted public host"}
 
         try:
             host = api.host(ip_address)

@@ -1,48 +1,140 @@
-﻿# backend/middleware/auth_middleware.py
-# SecureIT360 - Auth middleware
-# Verifies JWT and extracts tenant info
-from fastapi import Depends, HTTPException, status
+# backend/middleware/auth_middleware.py
+# SecureIT360 - Authentication & authorization dependencies
+#
+# Every privileged route enforces authorization at the dependency layer (not
+# only via any global middleware). Token is verified server-side against
+# Supabase Auth; roles are loaded from the database, never trusted from the
+# client. Platform-admin status is the ONLY source of global authority and is
+# stored in public.platform_admins.
+#
+#   Return codes:
+#     401 - missing or invalid authentication
+#     403 - authenticated but not authorized
+from typing import Optional, Tuple
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.database import supabase_admin
 
-security = HTTPBearer()
+# auto_error=False so a MISSING credential yields our own 401 (not the default 403).
+security = HTTPBearer(auto_error=False)
+
+
+def get_request_ip(request: Request) -> Optional[str]:
+    """Best-effort source IP. Honors X-Forwarded-For (Railway/Vercel proxy)."""
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        # First entry is the original client.
+        return xff.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return None
+
+
+def _verify_token(credentials: Optional[HTTPAuthorizationCredentials]) -> Tuple[str, str]:
+    """Verify a Supabase access token server-side. Returns (user_id, token)."""
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authentication",
+        )
+    token = credentials.credentials
+    try:
+        user = supabase_admin.auth.get_user(token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    if not user or not user.user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    return user.user.id, token
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Any authenticated user. Does not require tenant membership."""
+    user_id, token = _verify_token(credentials)
+    return {"user_id": user_id, "token": token}
+
 
 async def get_current_tenant(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    token = credentials.credentials
-    try:
-        user = supabase_admin.auth.get_user(token)
-        if not user or not user.user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token",
-            )
-        user_id = user.user.id
+    """Authenticated user resolved to their active tenant + role."""
+    user_id, token = _verify_token(credentials)
+    result = supabase_admin.table("tenant_users")\
+        .select("tenant_id, role")\
+        .eq("user_id", user_id)\
+        .eq("status", "active")\
+        .limit(1)\
+        .execute()
 
-        result = supabase_admin.table("tenant_users")\
-            .select("tenant_id, role")\
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenant found for this user",
+        )
+    return {
+        "user_id": user_id,
+        "tenant_id": result.data[0]["tenant_id"],
+        "role": result.data[0]["role"],
+        "token": token,
+    }
+
+
+async def require_tenant_admin(
+    tenant: dict = Depends(get_current_tenant),
+):
+    """Tenant owner/admin. Scoped to the caller's OWN tenant only."""
+    if tenant.get("role") not in ("owner", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requires tenant owner or admin role",
+        )
+    return tenant
+
+
+async def require_platform_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Platform-wide administrator. Authoritative source: public.platform_admins."""
+    user_id, token = _verify_token(credentials)
+    # Throttle privileged actions (distributed limiter). Import here to avoid a
+    # circular import at module load.
+    from services.rate_limit import enforce_rate_limit
+    enforce_rate_limit(f"admin:{user_id}", 120, 60)
+    try:
+        res = supabase_admin.table("platform_admins")\
+            .select("user_id")\
             .eq("user_id", user_id)\
-            .eq("status", "active")\
             .limit(1)\
             .execute()
-
-        if not result.data:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tenant found for this user",
-            )
-        return {
-            "user_id": user_id,
-            "tenant_id": result.data[0]["tenant_id"],
-            "role": result.data[0]["role"],
-            "token": token,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[AUTH MIDDLEWARE ERROR] {str(e)}")
+    except Exception:
+        # Fail closed: if we can't confirm platform-admin status, deny.
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator access required",
         )
+    if not res.data:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator access required",
+        )
+    return {"user_id": user_id, "token": token}
+
+
+def get_user_tenant_membership(user_id: str) -> Optional[dict]:
+    """Helper: return {tenant_id, role} for a user's active membership, or None."""
+    res = supabase_admin.table("tenant_users")\
+        .select("tenant_id, role")\
+        .eq("user_id", user_id)\
+        .eq("status", "active")\
+        .limit(1)\
+        .execute()
+    if res.data:
+        return res.data[0]
+    return None

@@ -75,7 +75,8 @@ def plain_english_description(breach: dict) -> str:
         f"This means hackers may have access to passwords used by your staff. "
         f"If any staff member reused that password on other accounts, "
         f"your business could be at risk right now. "
-        f"Under NZ and AU privacy law you may be required to notify affected individuals."
+        f"Depending on the circumstances, privacy law may require you to notify "
+        f"affected individuals. A legal or compliance review may be required."
     )
 
 
