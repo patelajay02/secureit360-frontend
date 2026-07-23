@@ -51,6 +51,15 @@ async def test_require_aal2_denies_missing_aal():
     assert e.value.status_code == 403
 
 
+# ── role -> MFA requirement (decision D5) ────────────────────────────────────
+def test_role_requires_mfa_platform_admin_and_owner():
+    assert am.role_requires_mfa(True, None) is True     # platform admin
+    assert am.role_requires_mfa(False, "owner") is True
+    assert am.role_requires_mfa(False, "admin") is False  # tenant policy may require later
+    assert am.role_requires_mfa(False, "member") is False
+    assert am.role_requires_mfa(False, None) is False
+
+
 # ── mfa-status endpoint ──────────────────────────────────────────────────────
 def _client(ctx, membership):
     app = FastAPI()

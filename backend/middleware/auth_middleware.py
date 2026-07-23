@@ -227,6 +227,15 @@ async def get_security_context(
     return {"user_id": user_id, "token": token, "aal": aal, "is_platform_admin": is_admin}
 
 
+def role_requires_mfa(is_platform_admin: bool, role: Optional[str]) -> bool:
+    """Roles for which MFA is MANDATORY (decision D5, mapped onto the real model):
+    platform admins and tenant OWNERS. Tenant `admin` may additionally be required
+    by tenant security policy (later stage); `member` is optional-by-default.
+    (`security_manager`/`company_admin` intentionally absent — not in the schema.)
+    """
+    return bool(is_platform_admin or role == "owner")
+
+
 async def require_aal2(ctx: dict = Depends(get_security_context)):
     """Require an MFA-verified (AAL2) session. 403 for insufficient assurance
     (distinct from 401 for missing authentication). Reused explicitly at route

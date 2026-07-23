@@ -16,6 +16,7 @@ from middleware.auth_middleware import (
     require_active_membership,
     get_owner_tenant_id,
     get_security_context,
+    role_requires_mfa,
     INCOMPLETE_SETUP_DETAIL,
 )
 from services.audit import log_audit
@@ -294,17 +295,15 @@ def login(data: LoginRequest, request: Request):
 
 @router.get("/security/mfa-status")
 def mfa_status(ctx: dict = Depends(get_security_context)):
-    mfa_required = ctx["is_platform_admin"]
-    role = "platform_admin" if ctx["is_platform_admin"] else None
-    if not mfa_required:
+    if ctx["is_platform_admin"]:
+        role = "platform_admin"
+    else:
         membership = get_user_tenant_membership(ctx["user_id"])
-        if membership:
-            role = membership.get("role")
-            mfa_required = membership.get("role") == "owner"
+        role = membership.get("role") if membership else None
     return {
         "aal": ctx.get("aal"),
         "is_aal2": ctx.get("aal") == "aal2",
-        "mfa_required": mfa_required,
+        "mfa_required": role_requires_mfa(ctx["is_platform_admin"], role),
         "is_platform_admin": ctx["is_platform_admin"],
         "role": role,
     }
