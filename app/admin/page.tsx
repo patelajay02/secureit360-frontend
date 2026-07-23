@@ -1,11 +1,12 @@
-﻿'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../lib/auth'
 
+const PAGE_SIZE = 25
+
 export default function AdminPage() {
-  // Access is gated by SERVER-SIDE platform-admin authorisation (GET /auth/admin/me),
-  // not by any client-side password. 'checking' -> verifying token; 'authorized' /
-  // 'denied' set from the server response.
+  // Authorization is decided by the /auth/admin/users response itself (no separate
+  // /auth/admin/me call). 403 -> denied; auth failure -> authFetch redirects to login.
   const [authState, setAuthState] = useState<'checking' | 'authorized' | 'denied'>('checking')
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -13,41 +14,54 @@ export default function AdminPage() {
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createForm, setCreateForm] = useState({ company_name: '', email: '', password: '', country: 'NZ' })
   const [createLoading, setCreateLoading] = useState(false)
   const [extendDays, setExtendDays] = useState<Record<string, number>>({})
 
+  // Debounce the search box; reset to page 1 when the query settles.
   useEffect(() => {
-    // Verify platform-admin status server-side before showing anything.
-    (async () => {
-      try {
-        const res = await authFetch('/auth/admin/me')
-        if (res.ok) {
-          setAuthState('authorized')
-          fetchUsers()
-        } else {
-          setAuthState('denied')
-        }
-      } catch {
-        setAuthState('denied')
-      }
-    })()
-  }, [])
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1) }, 400)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const fetchUsers = async () => {
+  // Single source of fetching: refetch whenever page / search / status changes.
+  useEffect(() => {
+    fetchUsers(page, debouncedSearch, filterStatus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, filterStatus])
+
+  const fetchUsers = async (p = page, s = debouncedSearch, st = filterStatus) => {
     setLoading(true)
     try {
-      const res = await authFetch('/auth/admin/users')
+      const params = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) })
+      if (s) params.set('search', s)
+      if (st && st !== 'all') params.set('status', st)
+      const res = await authFetch(`/auth/admin/users?${params.toString()}`)
+      if (res.status === 403) { setAuthState('denied'); return }
+      if (!res.ok) {
+        setAuthState('authorized')
+        showMessage('Failed to load clients.', 'error')
+        return
+      }
       const data = await res.json()
       setUsers(data.users || [])
+      setTotal(data.total || 0)
+      setTotalPages(data.total_pages || 1)
+      setAuthState('authorized')
     } catch {
-      showMessage('Failed to load users.', 'error')
+      // authFetch handles token expiry by redirecting to login.
     } finally {
       setLoading(false)
     }
   }
+
+  const refresh = () => fetchUsers(page, debouncedSearch, filterStatus)
 
   const showMessage = (msg: string, type: 'success' | 'error' = 'success') => {
     setMessage(msg)
@@ -60,17 +74,10 @@ export default function AdminPage() {
     setActionLoading(userId + '_delete')
     try {
       const res = await authFetch(`/auth/admin/delete/${userId}`, { method: 'DELETE' })
-      if (res.ok) {
-        showMessage(`${email} deleted successfully.`)
-        setUsers(users.filter(u => u.user_id !== userId))
-      } else {
-        showMessage('Could not delete user.', 'error')
-      }
-    } catch {
-      showMessage('Something went wrong.', 'error')
-    } finally {
-      setActionLoading(null)
-    }
+      if (res.ok) { showMessage(`${email} deleted successfully.`); refresh() }
+      else showMessage('Could not delete user.', 'error')
+    } catch { showMessage('Something went wrong.', 'error') }
+    finally { setActionLoading(null) }
   }
 
   const handleSuspend = async (userId: string, email: string, currentStatus: string) => {
@@ -79,21 +86,11 @@ export default function AdminPage() {
     if (!confirm(`${isSuspended ? 'Unsuspend' : 'Suspend'} ${email}?`)) return
     setActionLoading(userId + '_suspend')
     try {
-      const res = await authFetch(`/auth/admin/suspend/${userId}`, {
-        method: 'POST',
-        body: JSON.stringify({ action })
-      })
-      if (res.ok) {
-        showMessage(`${email} ${action}ed successfully.`)
-        fetchUsers()
-      } else {
-        showMessage(`Could not ${action} user.`, 'error')
-      }
-    } catch {
-      showMessage('Something went wrong.', 'error')
-    } finally {
-      setActionLoading(null)
-    }
+      const res = await authFetch(`/auth/admin/suspend/${userId}`, { method: 'POST', body: JSON.stringify({ action }) })
+      if (res.ok) { showMessage(`${email} ${action}ed successfully.`); refresh() }
+      else showMessage(`Could not ${action} user.`, 'error')
+    } catch { showMessage('Something went wrong.', 'error') }
+    finally { setActionLoading(null) }
   }
 
   const handleGrantAccess = async (userId: string, email: string, currentStatus: string) => {
@@ -102,21 +99,11 @@ export default function AdminPage() {
     if (!confirm(`${isComped ? 'Revoke full access from' : 'Grant full access to'} ${email}?`)) return
     setActionLoading(userId + '_access')
     try {
-      const res = await authFetch(`/auth/admin/access/${userId}`, {
-        method: 'POST',
-        body: JSON.stringify({ action })
-      })
-      if (res.ok) {
-        showMessage(`Full access ${action}ed for ${email}.`)
-        fetchUsers()
-      } else {
-        showMessage(`Could not ${action} access.`, 'error')
-      }
-    } catch {
-      showMessage('Something went wrong.', 'error')
-    } finally {
-      setActionLoading(null)
-    }
+      const res = await authFetch(`/auth/admin/access/${userId}`, { method: 'POST', body: JSON.stringify({ action }) })
+      if (res.ok) { showMessage(`Full access ${action}ed for ${email}.`); refresh() }
+      else showMessage(`Could not ${action} access.`, 'error')
+    } catch { showMessage('Something went wrong.', 'error') }
+    finally { setActionLoading(null) }
   }
 
   const handleExtendTrial = async (userId: string, email: string) => {
@@ -124,48 +111,29 @@ export default function AdminPage() {
     if (!confirm(`Extend trial for ${email} by ${days} days?`)) return
     setActionLoading(userId + '_extend')
     try {
-      const res = await authFetch(`/auth/admin/extend-trial/${userId}`, {
-        method: 'POST',
-        body: JSON.stringify({ days })
-      })
-      if (res.ok) {
-        showMessage(`Trial extended by ${days} days for ${email}.`)
-        fetchUsers()
-      } else {
-        showMessage('Could not extend trial.', 'error')
-      }
-    } catch {
-      showMessage('Something went wrong.', 'error')
-    } finally {
-      setActionLoading(null)
-    }
+      const res = await authFetch(`/auth/admin/extend-trial/${userId}`, { method: 'POST', body: JSON.stringify({ days }) })
+      if (res.ok) { showMessage(`Trial extended by ${days} days for ${email}.`); refresh() }
+      else showMessage('Could not extend trial.', 'error')
+    } catch { showMessage('Something went wrong.', 'error') }
+    finally { setActionLoading(null) }
   }
 
   const handleCreateAccount = async () => {
     if (!createForm.company_name || !createForm.email || !createForm.password) {
-      showMessage('Please fill in all fields.', 'error')
-      return
+      showMessage('Please fill in all fields.', 'error'); return
     }
     setCreateLoading(true)
     try {
-      const res = await authFetch(`/auth/admin/create-account`, {
-        method: 'POST',
-        body: JSON.stringify(createForm)
-      })
+      const res = await authFetch(`/auth/admin/create-account`, { method: 'POST', body: JSON.stringify(createForm) })
       const data = await res.json()
       if (res.ok) {
         showMessage(`Account created for ${createForm.email}. Full access granted.`)
         setShowCreateModal(false)
         setCreateForm({ company_name: '', email: '', password: '', country: 'NZ' })
-        fetchUsers()
-      } else {
-        showMessage(data.detail || 'Could not create account.', 'error')
-      }
-    } catch {
-      showMessage('Something went wrong.', 'error')
-    } finally {
-      setCreateLoading(false)
-    }
+        refresh()
+      } else showMessage(data.detail || 'Could not create account.', 'error')
+    } catch { showMessage('Something went wrong.', 'error') }
+    finally { setCreateLoading(false) }
   }
 
   const getStatusBadge = (status: string) => {
@@ -179,14 +147,6 @@ export default function AdminPage() {
     }
     return styles[status] || 'bg-gray-800 text-gray-400'
   }
-
-  const filteredUsers = users.filter(u => {
-    const matchSearch = search === '' ||
-      u.email?.toLowerCase().includes(search.toLowerCase()) ||
-      u.company_name?.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = filterStatus === 'all' || u.status === filterStatus
-    return matchSearch && matchStatus
-  })
 
   if (authState === 'checking') {
     return (
@@ -221,8 +181,8 @@ export default function AdminPage() {
           <p className="text-gray-500 text-xs mt-0.5">Global Cyber Assurance — Internal use only</p>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-gray-400 text-sm">{users.length} clients</span>
-          <button onClick={fetchUsers} className="text-gray-400 hover:text-white text-sm">Refresh</button>
+          <span className="text-gray-400 text-sm">{total} clients</span>
+          <button onClick={refresh} className="text-gray-400 hover:text-white text-sm">Refresh</button>
           <button onClick={() => setShowCreateModal(true)}
             className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
             + Create account
@@ -243,10 +203,10 @@ export default function AdminPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by email or company..."
+            placeholder="Search by company name..."
             className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-red-500"
           />
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+          <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
             className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none">
             <option value="all">All statuses</option>
             <option value="trial">Trial</option>
@@ -259,13 +219,21 @@ export default function AdminPage() {
         </div>
 
         {loading ? (
-          <p className="text-gray-500 text-sm">Loading clients...</p>
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-5 animate-pulse">
+                <div className="h-4 w-48 bg-gray-800 rounded mb-3" />
+                <div className="h-3 w-64 bg-gray-800/70 rounded mb-2" />
+                <div className="h-3 w-40 bg-gray-800/50 rounded" />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="space-y-3">
-            {filteredUsers.length === 0 && (
+            {users.length === 0 && (
               <p className="text-gray-500 text-sm">No clients found.</p>
             )}
-            {filteredUsers.map((user) => (
+            {users.map((user) => (
               <div key={user.user_id} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
@@ -346,6 +314,27 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="text-sm px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-gray-300 hover:bg-gray-800 disabled:opacity-40"
+            >
+              ← Previous
+            </button>
+            <span className="text-gray-500 text-sm">Page {page} of {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="text-sm px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-gray-300 hover:bg-gray-800 disabled:opacity-40"
+            >
+              Next →
+            </button>
           </div>
         )}
       </div>

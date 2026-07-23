@@ -1,6 +1,7 @@
 ﻿# SecureIT360 - Authentication Routes
 import threading
 import hashlib
+import time
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
@@ -433,41 +434,129 @@ def admin_me(admin: dict = Depends(require_platform_admin)):
     return {"is_platform_admin": True, "user_id": admin["user_id"]}
 
 
+# Batched owner-email retrieval config.
+_ADMIN_LIST_PAGE_SIZE = 200      # Supabase Auth list_users page size
+_ADMIN_LIST_MAX_PAGES = 50       # safety cap (<= 10k users scanned)
+MAX_ADMIN_PAGE_SIZE = 100        # max tenants per /admin/users page
+
+
+def _fetch_owner_emails(owner_ids: set) -> dict:
+    """Return {user_id: email} for the given owner ids using the batched Supabase
+    Auth list-users API — NO per-owner network calls.
+
+    Pages through admin.list_users(page, per_page); stops as soon as every needed
+    id is found, a short/empty page is returned, or the safety cap is hit. Ids not
+    found (e.g. a deleted auth user) are simply absent from the map and handled by
+    the caller as a blank email.
+    """
+    email_map: dict = {}
+    remaining = set(owner_ids)
+    if not remaining:
+        return email_map
+
+    page = 1
+    while page <= _ADMIN_LIST_MAX_PAGES and remaining:
+        batch = supabase_admin.auth.admin.list_users(page=page, per_page=_ADMIN_LIST_PAGE_SIZE)
+        if not batch:
+            break
+        for u in batch:
+            uid = getattr(u, "id", None)
+            if uid in remaining:
+                email_map[uid] = getattr(u, "email", None)
+                remaining.discard(uid)
+        if len(batch) < _ADMIN_LIST_PAGE_SIZE:
+            break  # last page reached
+        page += 1
+    return email_map
+
+
 @router.get("/admin/users")
-def admin_get_users(request: Request, admin: dict = Depends(require_platform_admin)):
+def admin_get_users(
+    request: Request,
+    admin: dict = Depends(require_platform_admin),
+    page: int = 1,
+    page_size: int = 25,
+    search: str = "",
+    status: str = "",
+):
+    t0 = time.perf_counter()
     try:
-        tenants = supabase_admin.table("tenants")\
-            .select("*, tenant_users(user_id, role, status)")\
-            .execute()
+        page = max(1, page)
+        page_size = min(max(1, page_size), MAX_ADMIN_PAGE_SIZE)
+        offset = (page - 1) * page_size
+
+        # Only the fields the admin UI needs — no select("*").
+        q = supabase_admin.table("tenants").select(
+            "id, name, country, status, plan, trial_ends_at, created_at, "
+            "tenant_users(user_id, role, status)",
+            count="exact",
+        )
+        if status:
+            q = q.eq("status", status)
+        if search:
+            q = q.ilike("name", f"%{search}%")
+
+        t_q = time.perf_counter()
+        res = q.order("created_at", desc=True).range(offset, offset + page_size - 1).execute()
+        tenant_query_ms = (time.perf_counter() - t_q) * 1000
+
+        tenants = res.data or []
+        total = getattr(res, "count", None) or 0
+
+        # Owner id for each tenant on THIS page only.
+        owner_by_tenant: dict = {}
+        owner_ids: set = set()
+        for tenant in tenants:
+            for tu in (tenant.get("tenant_users") or []):
+                if tu.get("role") == "owner":
+                    owner_by_tenant[tenant["id"]] = tu["user_id"]
+                    owner_ids.add(tu["user_id"])
+                    break
+
+        t_a = time.perf_counter()
+        email_map = _fetch_owner_emails(owner_ids)
+        auth_fetch_ms = (time.perf_counter() - t_a) * 1000
 
         users = []
-        for tenant in tenants.data:
-            for tu in tenant.get("tenant_users", []):
-                if tu["role"] == "owner":
-                    try:
-                        auth_user = supabase_admin.auth.admin.get_user_by_id(tu["user_id"])
-                        users.append({
-                            "user_id": tu["user_id"],
-                            "email": auth_user.user.email,
-                            "company_name": tenant["name"],
-                            "country": tenant.get("country", ""),
-                            "status": tenant.get("status", ""),
-                            "plan": tenant.get("plan", ""),
-                            "trial_ends_at": tenant.get("trial_ends_at", ""),
-                            "created_at": tenant.get("created_at", ""),
-                            "tenant_id": tenant["id"]
-                        })
-                    except Exception:
-                        pass
+        for tenant in tenants:
+            owner_id = owner_by_tenant.get(tenant["id"])
+            if not owner_id:
+                continue  # no owner membership (unchanged behaviour)
+            users.append({
+                "user_id": owner_id,
+                "email": email_map.get(owner_id) or "",
+                "company_name": tenant.get("name", ""),
+                "country": tenant.get("country", ""),
+                "status": tenant.get("status", ""),
+                "plan": tenant.get("plan", ""),
+                "trial_ends_at": tenant.get("trial_ends_at", ""),
+                "created_at": tenant.get("created_at", ""),
+                "tenant_id": tenant["id"],
+            })
+
+        total_pages = ((total + page_size - 1) // page_size) if total else 1
+        total_ms = (time.perf_counter() - t0) * 1000
+        print(f"[PERF] /auth/admin/users tenant_query={tenant_query_ms:.0f}ms "
+              f"auth_fetch={auth_fetch_ms:.0f}ms total={total_ms:.0f}ms "
+              f"tenants={len(tenants)} owners={len(owner_ids)}")
 
         log_audit("admin.users.list", actor_user_id=admin["user_id"],
                   outcome="success", ip=get_request_ip(request),
-                  detail={"count": len(users)})
-        return {"users": users}
+                  detail={"count": len(users), "page": page, "total": total})
+        return {
+            "users": users,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[ADMIN ERROR] {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        # Never leak raw DB errors to the browser.
+        print(f"[ADMIN ERROR] {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail="Could not load the client list. Please try again.")
 
 
 # --- ADMIN - DELETE USER ------------------------------------------------

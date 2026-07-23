@@ -10,6 +10,7 @@
 #   Return codes:
 #     401 - missing or invalid authentication
 #     403 - authenticated but not authorized
+import time
 from typing import Optional, Tuple
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -102,6 +103,7 @@ async def require_platform_admin(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """Platform-wide administrator. Authoritative source: public.platform_admins."""
+    _t0 = time.perf_counter()
     user_id, token = _verify_token(credentials)
     # Throttle privileged actions (distributed limiter). Import here to avoid a
     # circular import at module load.
@@ -124,6 +126,7 @@ async def require_platform_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Platform administrator access required",
         )
+    print(f"[PERF] admin.authz {(time.perf_counter() - _t0) * 1000:.0f}ms")
     return {"user_id": user_id, "token": token}
 
 
