@@ -20,6 +20,8 @@ from middleware.auth_middleware import (
 from services.audit import log_audit
 from services.rate_limit import enforce_rate_limit
 from services.recaptcha import verify_recaptcha
+from services.password_policy import validate_password, PasswordPolicyError
+from services.compromised_password import is_compromised
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -55,6 +57,17 @@ def register(data: RegisterRequest, request: Request):
             raise HTTPException(
                 status_code=400,
                 detail=f"Your email must match your company domain. Expected an email ending in @{company_domain}"
+            )
+
+        # Password policy + compromised-password screening (before Supabase sign-up).
+        try:
+            validate_password(data.password, email=data.email, company_name=data.company_name)
+        except PasswordPolicyError as pe:
+            raise HTTPException(status_code=400, detail=str(pe))
+        if is_compromised(data.password):
+            raise HTTPException(
+                status_code=400,
+                detail="This password has appeared in a known data breach. Please choose a different one.",
             )
 
         existing_domain = supabase_admin.table("domains")\
@@ -718,6 +731,20 @@ def admin_create_account(data: CreateAccountRequest, request: Request,
                          admin: dict = Depends(require_platform_admin)):
     ip = get_request_ip(request)
     try:
+        # Admin-created accounts must meet the same password policy + screening.
+        try:
+            validate_password(data.password, email=data.email, company_name=data.company_name)
+        except PasswordPolicyError as pe:
+            raise HTTPException(status_code=400, detail=str(pe))
+        if is_compromised(data.password):
+            log_audit("auth.password.compromised_blocked", actor_user_id=admin["user_id"],
+                      target_type="account", outcome="denied", ip=ip,
+                      detail={"reason": "compromised_password"})
+            raise HTTPException(
+                status_code=400,
+                detail="This password has appeared in a known data breach. Please choose a different one.",
+            )
+
         auth_response = supabase_admin.auth.admin.create_user({
             "email": data.email,
             "password": data.password,
@@ -763,6 +790,8 @@ def admin_create_account(data: CreateAccountRequest, request: Request,
             "login_url": "https://app.secureit360.co/login"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         log_audit("admin.account.create", actor_user_id=admin["user_id"],
                   outcome="error", ip=ip, detail={"company_name": data.company_name})
