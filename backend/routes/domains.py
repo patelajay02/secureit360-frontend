@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from services.database import supabase, supabase_admin
 from services.rate_limit import enforce_rate_limit
+from middleware.auth_middleware import INCOMPLETE_SETUP_DETAIL
 import hashlib
 import socket
 import dns.resolver
@@ -36,9 +37,11 @@ def add_domain(data: DomainRequest, authorization: str = Header(...)):
             .select("tenant_id, tenants(plan)")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
 
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
         plan = tenant_user.data["tenants"]["plan"]
 
@@ -93,19 +96,21 @@ def verify_domain(data: VerifyRequest, authorization: str = Header(...)):
             .select("tenant_id")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
 
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
 
         domain_row = supabase_admin.table("domains")\
             .select("*")\
             .eq("id", data.domain_id)\
             .eq("tenant_id", tenant_id)\
-            .single()\
+            .maybe_single()\
             .execute()
 
-        if not domain_row.data:
+        if not domain_row or not getattr(domain_row, "data", None):
             raise HTTPException(status_code=404, detail="Domain not found.")
 
         domain = domain_row.data["domain"]
@@ -170,9 +175,11 @@ def get_domains(authorization: str = Header(...)):
             .select("tenant_id")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
 
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
 
         domains = supabase_admin.table("domains")\
@@ -182,6 +189,8 @@ def get_domains(authorization: str = Header(...)):
 
         return {"domains": domains.data}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -198,9 +207,11 @@ def delete_domain(domain_id: str, authorization: str = Header(...)):
             .select("tenant_id, role")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
 
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
         role = tenant_user.data["role"]
 
@@ -211,10 +222,10 @@ def delete_domain(domain_id: str, authorization: str = Header(...)):
             .select("id")\
             .eq("id", domain_id)\
             .eq("tenant_id", tenant_id)\
-            .single()\
+            .maybe_single()\
             .execute()
 
-        if not domain.data:
+        if not domain or not getattr(domain, "data", None):
             raise HTTPException(status_code=404, detail="Domain not found.")
 
         supabase_admin.table("domains")\

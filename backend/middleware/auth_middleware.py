@@ -138,3 +138,65 @@ def get_user_tenant_membership(user_id: str) -> Optional[dict]:
     if res.data:
         return res.data[0]
     return None
+
+
+# ── Tenant-independence helpers ──────────────────────────────────────────────
+# Platform admins are a GLOBAL identity that lives entirely outside the tenant
+# hierarchy. Not every authenticated user belongs to a tenant, and no user is
+# assumed to belong to exactly one. Zero active memberships is a normal outcome
+# (a platform admin, or an incompletely-provisioned account) and is handled with
+# maybe_single() + a friendly message — never a raw PGRST116 error.
+
+INCOMPLETE_SETUP_DETAIL = "Your account setup is incomplete. Please contact support."
+
+
+def is_platform_admin(user_id: str) -> bool:
+    """True if the user is a platform (global) admin. Independent of any tenant."""
+    try:
+        res = supabase_admin.table("platform_admins")\
+            .select("user_id").eq("user_id", user_id).limit(1).execute()
+        return bool(res.data)
+    except Exception:
+        return False
+
+
+def resolve_active_membership(user_id: str, select: str = "tenant_id, role") -> Optional[dict]:
+    """Return the user's active tenant_users row (dict) or None.
+
+    Uses maybe_single() so 0 rows is a normal result, not an exception.
+    """
+    res = supabase_admin.table("tenant_users")\
+        .select(select)\
+        .eq("user_id", user_id)\
+        .eq("status", "active")\
+        .maybe_single()\
+        .execute()
+    return res.data if res and getattr(res, "data", None) else None
+
+
+def require_active_membership(user_id: str, select: str = "tenant_id, role") -> dict:
+    """Resolve the active membership or raise a friendly 409 (never PGRST116)."""
+    membership = resolve_active_membership(user_id, select)
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=INCOMPLETE_SETUP_DETAIL,
+        )
+    return membership
+
+
+def get_owner_tenant_id(user_id: str) -> Optional[str]:
+    """Return the tenant_id a user OWNS (role='owner'), or None.
+
+    This is a TARGET-user lookup used by platform-admin actions (suspend/comp/
+    extend a customer) — distinct from caller-membership resolution above. Uses
+    maybe_single() so a user who owns no tenant yields None (a 404), never a
+    raw PGRST116.
+    """
+    res = supabase_admin.table("tenant_users")\
+        .select("tenant_id")\
+        .eq("user_id", user_id)\
+        .eq("role", "owner")\
+        .maybe_single()\
+        .execute()
+    return res.data["tenant_id"] if res and getattr(res, "data", None) else None

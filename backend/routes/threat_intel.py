@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from services.database import supabase_admin
 from services.threat_intel_scan import run_threat_intel_scan
 from services.score_calculator import calculate_director_liability_score
+from middleware.auth_middleware import require_active_membership
 
 router = APIRouter()
 
@@ -12,17 +13,10 @@ def _get_tenant(authorization: str) -> tuple[str, str]:
     if not user or not user.user:
         raise HTTPException(status_code=401, detail="Invalid token")
     user_id = user.user.id
-    row = (
-        supabase_admin.table("tenant_users")
-        .select("tenant_id")
-        .eq("user_id", user_id)
-        .eq("status", "active")
-        .single()
-        .execute()
-    )
-    if not row.data:
-        raise HTTPException(status_code=403, detail="No tenant found for this user")
-    return user_id, row.data["tenant_id"]
+    # maybe_single via the shared helper: no active membership -> friendly 409,
+    # never a raw PGRST116. Platform admins (no tenant) are correctly denied here.
+    tenant_id = require_active_membership(user_id, "tenant_id")["tenant_id"]
+    return user_id, tenant_id
 
 
 @router.post("/scan")

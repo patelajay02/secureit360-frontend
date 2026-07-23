@@ -11,6 +11,10 @@ from middleware.auth_middleware import (
     get_current_user,
     get_request_ip,
     get_user_tenant_membership,
+    is_platform_admin,
+    require_active_membership,
+    get_owner_tenant_id,
+    INCOMPLETE_SETUP_DETAIL,
 )
 from services.audit import log_audit
 from services.rate_limit import enforce_rate_limit
@@ -172,12 +176,38 @@ def login(data: LoginRequest, request: Request):
         token = auth_response.session.access_token
         refresh_token = auth_response.session.refresh_token
 
+        # ── Platform admins authenticate INDEPENDENTLY of tenant membership ──
+        # A global admin has no tenant, tenant_users row, or domain. Check
+        # platform_admins first and return a tenant-less session; never fall
+        # through to the tenant lookup for them.
+        if is_platform_admin(user_id):
+            return {
+                "token": token,
+                "refresh_token": refresh_token,
+                "user_id": user_id,
+                "email": data.email,
+                "tenant_id": None,
+                "role": "platform_admin",
+                "is_platform_admin": True,
+                "company_name": "SecureIT360",
+                "plan": None,
+                "status": "active",
+                "trial_ends_at": None,
+                "country": None,
+                "mobile": "",
+            }
+
+        # ── Regular users: resolve their active tenant membership ──
+        # maybe_single() so 0 rows is a normal, handled outcome (not PGRST116).
         tenant_user = supabase_admin.table("tenant_users")\
             .select("*, tenants(*)")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
+
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
 
         tenant = tenant_user.data["tenants"]
         tenant_status = tenant.get("status")
@@ -234,7 +264,12 @@ def login(data: LoginRequest, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # Never leak raw PGRST/DB errors to the client; log securely server-side.
+        print(f"[LOGIN ERROR] {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="We couldn't log you in right now. Please try again or contact support.",
+        )
 
 
 # --- REFRESH TOKEN ------------------------------------------------------
@@ -326,16 +361,10 @@ def invite_user(data: dict, authorization: str = Header(...)):
         user = supabase.auth.get_user(token)
         user_id = user.user.id
 
-        tenant_user = supabase_admin.table("tenant_users")\
-            .select("tenant_id, role, tenants(name)")\
-            .eq("user_id", user_id)\
-            .eq("status", "active")\
-            .single()\
-            .execute()
-
-        role = tenant_user.data["role"]
-        tenant_id = tenant_user.data["tenant_id"]
-        company_name = tenant_user.data["tenants"]["name"]
+        membership = require_active_membership(user_id, "tenant_id, role, tenants(name)")
+        role = membership["role"]
+        tenant_id = membership["tenant_id"]
+        company_name = membership["tenants"]["name"]
 
         if role not in ["owner", "admin"]:
             raise HTTPException(status_code=403, detail="Only owners and admins can invite team members.")
@@ -380,14 +409,7 @@ def get_users(authorization: str = Header(...)):
         user = supabase.auth.get_user(token)
         user_id = user.user.id
 
-        tenant_user = supabase_admin.table("tenant_users")\
-            .select("tenant_id")\
-            .eq("user_id", user_id)\
-            .eq("status", "active")\
-            .single()\
-            .execute()
-
-        tenant_id = tenant_user.data["tenant_id"]
+        tenant_id = require_active_membership(user_id, "tenant_id")["tenant_id"]
 
         users = supabase_admin.table("tenant_users")\
             .select("*")\
@@ -396,6 +418,8 @@ def get_users(authorization: str = Header(...)):
 
         return {"users": users.data}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -477,14 +501,9 @@ def admin_suspend_user(user_id: str, data: SuspendRequest, request: Request,
                        admin: dict = Depends(require_platform_admin)):
     ip = get_request_ip(request)
     try:
-        tenant_user = supabase_admin.table("tenant_users")\
-            .select("tenant_id")\
-            .eq("user_id", user_id)\
-            .eq("role", "owner")\
-            .single()\
-            .execute()
-
-        tenant_id = tenant_user.data["tenant_id"]
+        tenant_id = get_owner_tenant_id(user_id)
+        if not tenant_id:
+            raise HTTPException(status_code=404, detail="This user does not own a tenant.")
         new_status = "suspended" if data.action == "suspend" else "trial"
 
         supabase_admin.table("tenants")\
@@ -497,6 +516,8 @@ def admin_suspend_user(user_id: str, data: SuspendRequest, request: Request,
                   detail={"action": data.action, "new_status": new_status})
         return {"message": f"User {data.action}ed successfully"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         log_audit("admin.tenant.suspend", actor_user_id=admin["user_id"], target_type="user",
                   target_id=user_id, outcome="error", ip=ip, detail={"action": data.action})
@@ -514,14 +535,9 @@ def admin_grant_access(user_id: str, data: AccessRequest, request: Request,
                        admin: dict = Depends(require_platform_admin)):
     ip = get_request_ip(request)
     try:
-        tenant_user = supabase_admin.table("tenant_users")\
-            .select("tenant_id")\
-            .eq("user_id", user_id)\
-            .eq("role", "owner")\
-            .single()\
-            .execute()
-
-        tenant_id = tenant_user.data["tenant_id"]
+        tenant_id = get_owner_tenant_id(user_id)
+        if not tenant_id:
+            raise HTTPException(status_code=404, detail="This user does not own a tenant.")
 
         if data.action == "grant":
             supabase_admin.table("tenants")\
@@ -539,6 +555,8 @@ def admin_grant_access(user_id: str, data: AccessRequest, request: Request,
                   detail={"action": data.action})
         return {"message": f"Access {data.action}ed successfully"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         log_audit("admin.tenant.access", actor_user_id=admin["user_id"], target_type="user",
                   target_id=user_id, outcome="error", ip=ip, detail={"action": data.action})
@@ -556,14 +574,9 @@ def admin_extend_trial(user_id: str, data: ExtendTrialRequest, request: Request,
                        admin: dict = Depends(require_platform_admin)):
     ip = get_request_ip(request)
     try:
-        tenant_user = supabase_admin.table("tenant_users")\
-            .select("tenant_id")\
-            .eq("user_id", user_id)\
-            .eq("role", "owner")\
-            .single()\
-            .execute()
-
-        tenant_id = tenant_user.data["tenant_id"]
+        tenant_id = get_owner_tenant_id(user_id)
+        if not tenant_id:
+            raise HTTPException(status_code=404, detail="This user does not own a tenant.")
 
         tenant = supabase_admin.table("tenants")\
             .select("trial_ends_at")\
@@ -594,6 +607,8 @@ def admin_extend_trial(user_id: str, data: ExtendTrialRequest, request: Request,
                   detail={"days": data.days})
         return {"message": f"Trial extended by {data.days} days"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         log_audit("admin.tenant.extend_trial", actor_user_id=admin["user_id"], target_type="user",
                   target_id=user_id, outcome="error", ip=ip, detail={"days": data.days})
@@ -710,13 +725,7 @@ def verify_email(request: Request, caller: dict = Depends(get_current_user)):
     try:
         user_id = caller["user_id"]
 
-        tenant_user = supabase_admin.table("tenant_users")\
-            .select("tenant_id")\
-            .eq("user_id", user_id)\
-            .single()\
-            .execute()
-
-        tenant_id = tenant_user.data["tenant_id"]
+        tenant_id = require_active_membership(user_id, "tenant_id")["tenant_id"]
 
         supabase_admin.table("tenants")\
             .update({"status": "trial"})\

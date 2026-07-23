@@ -46,13 +46,16 @@ export default function LoginPage() {
         plan: data.plan,
         country: data.country,
         mobile: data.mobile,
+        is_platform_admin: !!data.is_platform_admin,
       });
       localStorage.setItem("company_name", data.company_name || "");
-      localStorage.setItem("country", data.country || "NZ");
+      localStorage.setItem("country", data.country || "");
       localStorage.setItem("plan", data.plan || "");
-      localStorage.setItem("status", data.status || "trial");
+      localStorage.setItem("status", data.status || "");
       localStorage.setItem("trial_ends_at", data.trial_ends_at || "");
-      router.push("/dashboard");
+      // Platform admins have no tenant; the dashboard requires one, so route
+      // them to the admin console instead.
+      router.push(data.is_platform_admin ? "/admin" : "/dashboard");
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {

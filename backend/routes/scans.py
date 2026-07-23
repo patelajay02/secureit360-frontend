@@ -21,6 +21,7 @@ from services.cloud_scan import run_cloud_scan
 from services.full_scan import run_full_scan
 from services.target_guard import validate_public_hostname, TargetValidationError
 from services.rate_limit import enforce_rate_limit
+from middleware.auth_middleware import INCOMPLETE_SETUP_DETAIL
 
 router = APIRouter()
 
@@ -53,7 +54,7 @@ def _resolve_verified_target(authorization: str, domain_id: str):
         .limit(1)\
         .execute()
     if not tenant_user.data:
-        raise HTTPException(status_code=403, detail="No tenant found for this user")
+        raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
     tenant_id = tenant_user.data[0]["tenant_id"]
 
     # Throttle scan creation per tenant (expensive outbound work / DoS guard).
@@ -149,9 +150,11 @@ def get_scans(authorization: str = Header(...)):
             .select("tenant_id")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
 
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
 
         scans = supabase_admin.table("scans")\
@@ -162,6 +165,8 @@ def get_scans(authorization: str = Header(...)):
 
         return {"scans": scans.data}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -178,9 +183,11 @@ def get_findings(authorization: str = Header(...)):
             .select("tenant_id")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
 
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
 
         findings = supabase_admin.table("findings")\
@@ -191,6 +198,8 @@ def get_findings(authorization: str = Header(...)):
 
         return {"findings": findings.data}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -292,17 +301,19 @@ def auto_fix_finding(finding_id: str, authorization: str = Header(...)):
             .select("tenant_id")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
         tenant_id = tenant_user.data["tenant_id"]
 
         finding_r = supabase_admin.table("findings")\
             .select("*")\
             .eq("id", finding_id)\
             .eq("tenant_id", tenant_id)\
-            .single()\
+            .maybe_single()\
             .execute()
-        finding = finding_r.data
+        finding = finding_r.data if finding_r else None
         if not finding:
             raise HTTPException(status_code=404, detail="Finding not found")
         if not finding.get("auto_fixable"):

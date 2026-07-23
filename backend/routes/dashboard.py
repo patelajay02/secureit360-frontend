@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Header
 from services.database import supabase, supabase_admin
 from services.regulatory_intelligence import normalize_country, attach_to_finding
+from middleware.auth_middleware import INCOMPLETE_SETUP_DETAIL
 
 router = APIRouter()
 
@@ -457,12 +458,18 @@ def get_dashboard(authorization: str = Header(...)):
         user = supabase.auth.get_user(token)
         user_id = user.user.id
 
+        # maybe_single(): a user with no active membership (e.g. a platform
+        # admin, who should use /admin, or an unprovisioned account) is handled
+        # gracefully, not with a raw PGRST116 error.
         tenant_user = supabase_admin.table("tenant_users")\
             .select("tenant_id, role, tenants(*)")\
             .eq("user_id", user_id)\
             .eq("status", "active")\
-            .single()\
+            .maybe_single()\
             .execute()
+
+        if not tenant_user or not getattr(tenant_user, "data", None):
+            raise HTTPException(status_code=409, detail=INCOMPLETE_SETUP_DETAIL)
 
         tenant_id = tenant_user.data["tenant_id"]
         company_name = tenant_user.data["tenants"]["name"]
@@ -570,7 +577,10 @@ def get_dashboard(authorization: str = Header(...)):
             "breach_watch": breach_watch,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[DASHBOARD ERROR] {type(e).__name__}: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 
