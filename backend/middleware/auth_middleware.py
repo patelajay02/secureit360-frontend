@@ -11,6 +11,8 @@
 #     401 - missing or invalid authentication
 #     403 - authenticated but not authorized
 import time
+import json
+import base64
 from typing import Optional, Tuple
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -186,6 +188,55 @@ def require_active_membership(user_id: str, select: str = "tenant_id, role") -> 
             detail=INCOMPLETE_SETUP_DETAIL,
         )
     return membership
+
+
+# ── Assurance level (AAL) — MFA enforcement ─────────────────────────────────
+# The session's assurance level lives in the `aal` claim of the Supabase JWT
+# ("aal1" = password only, "aal2" = password + verified MFA). We read it ONLY
+# from a token that _verify_token has already authenticated against Supabase Auth
+# (get_user), so the claim is trustworthy and no signing secret is needed here.
+
+def _decode_jwt_claims(token: str) -> dict:
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)  # pad base64url
+        return json.loads(base64.urlsafe_b64decode(payload))
+    except Exception:
+        return {}
+
+
+def get_token_aal(token: str) -> Optional[str]:
+    """Return the session assurance level ('aal1'|'aal2') from a validated token."""
+    return _decode_jwt_claims(token).get("aal")
+
+
+async def get_security_context(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Reusable security context for privileged routes: verified identity plus
+    assurance level and platform-admin flag. 401 on missing/invalid auth."""
+    user_id, token = _verify_token(credentials)  # authenticity confirmed by Supabase
+    aal = get_token_aal(token)
+    is_admin = False
+    try:
+        res = supabase_admin.table("platform_admins")\
+            .select("user_id").eq("user_id", user_id).limit(1).execute()
+        is_admin = bool(res.data)
+    except Exception:
+        is_admin = False
+    return {"user_id": user_id, "token": token, "aal": aal, "is_platform_admin": is_admin}
+
+
+async def require_aal2(ctx: dict = Depends(get_security_context)):
+    """Require an MFA-verified (AAL2) session. 403 for insufficient assurance
+    (distinct from 401 for missing authentication). Reused explicitly at route
+    level for high-risk operations — never relied on from the frontend alone."""
+    if ctx.get("aal") != "aal2":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multi-factor authentication is required for this action.",
+        )
+    return ctx
 
 
 def get_owner_tenant_id(user_id: str) -> Optional[str]:

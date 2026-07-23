@@ -163,3 +163,22 @@ Recorded below after commit.
 - **Stage 5:** tenant security policy → full regression + security testing.
 
 *This pass delivers Stage 3's password controls (fully tested and safe) and the audit/conflict report the spec required first. The remaining stages are ready to implement once the four decisions are made.*
+
+---
+
+## Stage 1a — AAL2 backend foundation (DELIVERED)
+
+**Decisions received:** adopt the Supabase JS SDK for native MFA/AAL (C1); Phase 0 is deployed + migrations applied (C4 resolved); the operator enables/verifies native MFA, leaked-password protection and session settings in the dashboard (C3). Stage 1 is split so no lockout window can occur:
+
+- **Stage 1a (this pass — safe, non-breaking, no route hard-blocks):**
+  - Migration `supabase/migrations/20260723_user_security_profiles.sql` — `user_security_profiles` (forced-reset flags, last strong reauth, notification pref, `mfa_required`), RLS (own-row select; writes service-role only). *Apply via your normal process; I did not apply it.*
+  - `middleware/auth_middleware.py`: `get_token_aal()` (reads the `aal` claim from a token **already authenticated** by `get_user` — no signing secret needed), `get_security_context()` (identity + aal + platform-admin flag), and **`require_aal2`** (403 for insufficient assurance, 401 for missing auth) — a reusable, route-level dependency (not middleware-only).
+  - `GET /auth/security/mfa-status` — reports `aal`, `is_aal2`, `mfa_required` (true for platform_admin and tenant `owner`), `role`, so the frontend can force enrollment / an AAL2 challenge.
+  - Tests `backend/tests/test_aal2.py` (8): aal extraction (incl. malformed token), `require_aal2` allow/deny (aal2/aal1/missing), and mfa-status role logic (platform_admin/owner required, member not).
+  - **`require_aal2` is intentionally NOT yet attached to routes** — it is attached in Stage 1b together with the enrollment UI, so the currently-un-enrolled platform admin cannot be locked out.
+
+- **Stage 1b (next — frontend, built + validated carefully):** add `@supabase/supabase-js`; hydrate the JS session from the existing backend login tokens (`setSession`) as the compatibility bridge; `/settings/security/mfa` enrollment wizard (QR + manual secret + 6-digit verify via `mfa.enroll/challenge/verify`); login MFA-challenge step when a verified factor exists at AAL1; then **attach `require_aal2` to the privileged routes in §10**. This must be validated against the now-MFA-enabled Supabase project (which I cannot exercise from the audit environment), which is why it is a separate, deliberate increment rather than shipped blind.
+
+**Stage 1a results:** 143 backend tests pass (135 + 8); type-check exit 0; production build ✓ (21/21). No frontend change, no route behaviour change, no Supabase change, no deploy.
+
+**Manual step for Stage 1b:** in Supabase → Auth, **enable TOTP MFA** (and leaked-password protection); add `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (anon key only) to Vercel.

@@ -15,6 +15,7 @@ from middleware.auth_middleware import (
     is_platform_admin,
     require_active_membership,
     get_owner_tenant_id,
+    get_security_context,
     INCOMPLETE_SETUP_DETAIL,
 )
 from services.audit import log_audit
@@ -284,6 +285,29 @@ def login(data: LoginRequest, request: Request):
             status_code=500,
             detail="We couldn't log you in right now. Please try again or contact support.",
         )
+
+
+# --- MFA STATUS (Stage 1) ----------------------------------------------
+# Reports whether MFA is required for the caller's role and the current session
+# assurance level, so the frontend can require enrollment / an AAL2 challenge.
+# Privileged roles (platform_admin, tenant owner) require MFA.
+
+@router.get("/security/mfa-status")
+def mfa_status(ctx: dict = Depends(get_security_context)):
+    mfa_required = ctx["is_platform_admin"]
+    role = "platform_admin" if ctx["is_platform_admin"] else None
+    if not mfa_required:
+        membership = get_user_tenant_membership(ctx["user_id"])
+        if membership:
+            role = membership.get("role")
+            mfa_required = membership.get("role") == "owner"
+    return {
+        "aal": ctx.get("aal"),
+        "is_aal2": ctx.get("aal") == "aal2",
+        "mfa_required": mfa_required,
+        "is_platform_admin": ctx["is_platform_admin"],
+        "role": role,
+    }
 
 
 # --- REFRESH TOKEN ------------------------------------------------------
