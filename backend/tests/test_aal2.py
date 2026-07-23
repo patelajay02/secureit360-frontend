@@ -30,25 +30,45 @@ def test_get_token_aal_handles_garbage():
     assert am.get_token_aal("") is None
 
 
-# ── require_aal2 ─────────────────────────────────────────────────────────────
+# ── require_aal2 (gated by AAL2_ENFORCEMENT) ─────────────────────────────────
 @pytest.mark.asyncio
-async def test_require_aal2_allows_aal2():
+async def test_require_aal2_allows_aal2_when_enforced(monkeypatch):
+    monkeypatch.setenv("AAL2_ENFORCEMENT", "on")
     ctx = {"user_id": "u1", "aal": "aal2", "is_platform_admin": True}
     assert (await am.require_aal2(ctx))["aal"] == "aal2"
 
 
 @pytest.mark.asyncio
-async def test_require_aal2_denies_aal1():
+async def test_require_aal2_denies_aal1_when_enforced(monkeypatch):
+    monkeypatch.setenv("AAL2_ENFORCEMENT", "on")
     with pytest.raises(HTTPException) as e:
         await am.require_aal2({"user_id": "u1", "aal": "aal1", "is_platform_admin": True})
     assert e.value.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_require_aal2_denies_missing_aal():
+async def test_require_aal2_denies_missing_aal_when_enforced(monkeypatch):
+    monkeypatch.setenv("AAL2_ENFORCEMENT", "on")
     with pytest.raises(HTTPException) as e:
         await am.require_aal2({"user_id": "u1", "aal": None, "is_platform_admin": False})
     assert e.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_require_aal2_bypasses_when_disabled(monkeypatch):
+    # Default OFF -> no lockout window: aal1 is allowed through.
+    monkeypatch.delenv("AAL2_ENFORCEMENT", raising=False)
+    ctx = {"user_id": "u1", "aal": "aal1", "is_platform_admin": True}
+    assert (await am.require_aal2(ctx))["aal"] == "aal1"
+
+
+def test_aal2_enforcement_flag(monkeypatch):
+    monkeypatch.setenv("AAL2_ENFORCEMENT", "on")
+    assert am.aal2_enforcement_enabled() is True
+    monkeypatch.setenv("AAL2_ENFORCEMENT", "off")
+    assert am.aal2_enforcement_enabled() is False
+    monkeypatch.delenv("AAL2_ENFORCEMENT", raising=False)
+    assert am.aal2_enforcement_enabled() is False
 
 
 # ── role -> MFA requirement (decision D5) ────────────────────────────────────

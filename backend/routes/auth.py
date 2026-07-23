@@ -24,6 +24,7 @@ from services.rate_limit import enforce_rate_limit
 from services.recaptcha import verify_recaptcha
 from services.password_policy import validate_password, PasswordPolicyError
 from services.compromised_password import is_compromised
+from services.recovery_codes import generate_recovery_codes, verify_recovery_code
 import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -307,6 +308,42 @@ def mfa_status(ctx: dict = Depends(get_security_context)):
         "is_platform_admin": ctx["is_platform_admin"],
         "role": role,
     }
+
+
+# --- MFA RECOVERY CODES (Stage 1b) -------------------------------------
+# Generation returns plaintext ONCE (never stored/logged); verification is
+# one-time and rate-limited and does not disclose structural validity.
+
+class RecoveryVerifyRequest(BaseModel):
+    code: str
+
+
+@router.post("/security/recovery-codes")
+def create_recovery_codes(request: Request, ctx: dict = Depends(get_security_context)):
+    """Generate a fresh batch of recovery codes for the authenticated user.
+    Requires AAL2 when enforcement is enabled (the user has just verified MFA)."""
+    ip = get_request_ip(request)
+    enforce_rate_limit(f"recovery-gen:{ctx['user_id']}", 5, 3600)
+    codes = generate_recovery_codes(ctx["user_id"])
+    log_audit("auth.mfa.recovery_regenerated", actor_user_id=ctx["user_id"],
+              target_type="user", target_id=ctx["user_id"], outcome="success", ip=ip,
+              detail={"count": len(codes)})
+    return {"codes": codes}  # shown once
+
+
+@router.post("/security/recovery-codes/verify")
+def verify_recovery(data: RecoveryVerifyRequest, request: Request,
+                    caller: dict = Depends(get_current_user)):
+    """Verify + consume a recovery code (one-time). Generic response; does not
+    reveal whether the code was structurally valid."""
+    ip = get_request_ip(request)
+    enforce_rate_limit(f"recovery-verify:{ip}", 10, 900)
+    enforce_rate_limit(f"recovery-verify-user:{caller['user_id']}", 10, 900)
+    ok = verify_recovery_code(caller["user_id"], data.code)
+    log_audit("auth.mfa.recovery_used", actor_user_id=caller["user_id"],
+              target_type="user", target_id=caller["user_id"],
+              outcome="success" if ok else "denied", ip=ip)
+    return {"verified": ok}
 
 
 # --- REFRESH TOKEN ------------------------------------------------------

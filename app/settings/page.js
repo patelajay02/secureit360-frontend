@@ -425,9 +425,14 @@ export default function SettingsPage() {
             SecureIT<span className="text-red-500">360</span>
             <span className="text-gray-400 font-normal text-base ml-3">Settings</span>
           </h1>
-          <a href="/dashboard" className="text-sm text-red-400 hover:text-red-300">
-            Back to Dashboard
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="/settings/security" className="text-sm text-gray-300 hover:text-white">
+              Security &amp; MFA
+            </a>
+            <a href="/dashboard" className="text-sm text-red-400 hover:text-red-300">
+              Back to Dashboard
+            </a>
+          </div>
         </div>
       </div>
 

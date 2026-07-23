@@ -10,6 +10,7 @@
 #   Return codes:
 #     401 - missing or invalid authentication
 #     403 - authenticated but not authorized
+import os
 import time
 import json
 import base64
@@ -128,6 +129,13 @@ async def require_platform_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Platform administrator access required",
         )
+    # Step-up: platform-admin actions require an MFA-verified (AAL2) session when
+    # enforcement is enabled (operator-controlled; OFF by default -> no lockout).
+    if aal2_enforcement_enabled() and get_token_aal(token) != "aal2":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multi-factor authentication is required for administrator actions.",
+        )
     print(f"[PERF] admin.authz {(time.perf_counter() - _t0) * 1000:.0f}ms")
     return {"user_id": user_id, "token": token}
 
@@ -236,11 +244,24 @@ def role_requires_mfa(is_platform_admin: bool, role: Optional[str]) -> bool:
     return bool(is_platform_admin or role == "owner")
 
 
+def aal2_enforcement_enabled() -> bool:
+    """Whether AAL2 (MFA) is actively enforced on privileged routes.
+
+    Controlled by the AAL2_ENFORCEMENT env var (default OFF). This is the
+    NO-LOCKOUT-WINDOW safety valve: the operator flips it ON only AFTER
+    confirming (smoke test) that enrollment + challenge work and privileged
+    users can reach AAL2. While OFF, privileged routes behave exactly as before
+    (role-only), so shipping this code cannot lock anyone out.
+    """
+    return os.getenv("AAL2_ENFORCEMENT", "off").strip().lower() in ("on", "true", "1", "yes")
+
+
 async def require_aal2(ctx: dict = Depends(get_security_context)):
-    """Require an MFA-verified (AAL2) session. 403 for insufficient assurance
-    (distinct from 401 for missing authentication). Reused explicitly at route
-    level for high-risk operations — never relied on from the frontend alone."""
-    if ctx.get("aal") != "aal2":
+    """Require an MFA-verified (AAL2) session for a high-risk operation. 403 for
+    insufficient assurance (distinct from 401 for missing authentication). Reused
+    explicitly at route level — never relied on from the frontend alone. Gated by
+    aal2_enforcement_enabled() so activation is operator-controlled."""
+    if aal2_enforcement_enabled() and ctx.get("aal") != "aal2":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Multi-factor authentication is required for this action.",
