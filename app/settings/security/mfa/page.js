@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { requireAuth, setToken, setRefreshToken, clearMfaGate, getMfaReturnTo } from "../../../../lib/auth";
+import { requireAuth, setToken, setRefreshToken, setMfaGate, clearMfaGate, getMfaReturnTo } from "../../../../lib/auth";
 import {
   mfaClientStatus,
   hydrateSession,
@@ -54,10 +54,12 @@ export default function MfaEnrollPage() {
     try {
       const res = await beginEnrollment();
       if (res.status === "already_enrolled") {
-        // Verified factor exists. If a step-up is pending, go challenge; else it
-        // is simply already enabled.
+        // Verified factor exists. If a step-up is pending, move the gate to
+        // "challenge" (keeps the guard and the challenge page consistent) and
+        // redirect ONCE; otherwise it is simply already enabled.
         const { currentLevel, nextLevel } = await getAAL();
         if (nextLevel === "aal2" && currentLevel !== "aal2") {
+          setMfaGate("challenge");
           router.replace("/mfa-challenge");
           return;
         }

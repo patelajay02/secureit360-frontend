@@ -40,9 +40,10 @@ export default function MfaChallengePage() {
       try {
         const { totp } = await listFactors();
         if (totp.length === 0) {
-          // No verified factor after all — clear the gate to avoid a loop.
-          clearMfaGate();
-          router.replace(dest());
+          // No verified factor to challenge — send to enrollment WITHOUT clearing
+          // the gate (a required user must not escape the gate via this route).
+          // Enrollment with no factor lands on the QR step, so there is no loop.
+          router.replace("/settings/security/mfa");
           return;
         }
         setFactorId(totp[0].id);
