@@ -5,14 +5,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { setToken, setRefreshToken, setUser, publicFetch } from "../../lib/auth";
 import {
-  isMfaConfigured,
-  hydrateSessionWith,
-  needsChallenge,
-  listFactors,
-  verifyCode,
-} from "../../lib/mfa";
+  setToken, setRefreshToken, setUser, publicFetch,
+  setMfaGate, clearMfaGate, setMfaReturnTo,
+} from "../../lib/auth";
+import { fetchMfaGate } from "../../lib/mfa";
+import { GATE_ROUTE } from "../../lib/mfaGate";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,12 +20,6 @@ export default function LoginPage() {
   const [forgotSent, setForgotSent] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-
-  // MFA step-up (only reached when the user has a verified TOTP factor)
-  const [mfaStep, setMfaStep] = useState(false);
-  const [mfaFactorId, setMfaFactorId] = useState(null);
-  const [mfaCode, setMfaCode] = useState("");
-  const [pendingRoute, setPendingRoute] = useState("/dashboard");
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -72,50 +64,25 @@ export default function LoginPage() {
       persistSession(data);
       // Platform admins have no tenant; the dashboard requires one, so route
       // them to the admin console instead.
-      const route = data.is_platform_admin ? "/admin" : "/dashboard";
-      setPendingRoute(route);
+      const dest = data.is_platform_admin ? "/admin" : "/dashboard";
+      setMfaReturnTo(dest);
 
-      // ── MFA bridge (fallback-safe) ──
-      // If native MFA is configured and this user has a verified factor, the
-      // password-only session is aal1 and must step up to aal2. Any failure
-      // here (env not set, network, etc.) falls through to normal routing so
-      // password-only users and unconfigured environments are unaffected.
-      if (isMfaConfigured()) {
-        try {
-          const hydrated = await hydrateSessionWith(data.token, data.refresh_token);
-          if (hydrated && (await needsChallenge())) {
-            const { totp } = await listFactors();
-            if (totp.length > 0) {
-              setMfaFactorId(totp[0].id);
-              setMfaStep(true);
-              return; // wait for the 6-digit code
-            }
-          }
-        } catch {
-          // ignore — proceed with aal1 session
-        }
+      // ── Mandatory MFA gate (backend-authoritative, fallback-safe) ──
+      // The backend decides: "enroll" (required role, no factor) ->
+      // /settings/security/mfa; "challenge" (verified factor, session still
+      // AAL1) -> /mfa-challenge; "allow" -> the requested destination. Any
+      // failure resolves to "allow", so unconfigured environments and
+      // password-only users are unaffected.
+      const gate = await fetchMfaGate();
+      if (gate === "enroll" || gate === "challenge") {
+        setMfaGate(gate);
+        router.push(GATE_ROUTE[gate]);
+        return;
       }
-      router.push(route);
+      clearMfaGate();
+      router.push(dest);
     } catch (err) {
       setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleMfaSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const tokens = await verifyCode(mfaFactorId, mfaCode);
-      // Persist the upgraded (aal2) tokens so subsequent API calls carry aal2.
-      if (tokens.access_token) setToken(tokens.access_token);
-      if (tokens.refresh_token) setRefreshToken(tokens.refresh_token);
-      router.push(pendingRoute);
-    } catch (err) {
-      setError(err.message || "That code was not correct. Please try again.");
-      setMfaCode("");
     } finally {
       setLoading(false);
     }
@@ -147,44 +114,7 @@ export default function LoginPage() {
           <p className="text-gray-400 mt-2">by Global Cyber Assurance</p>
         </div>
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
-          {mfaStep ? (
-            <>
-              <h2 className="text-xl font-semibold text-white mb-2">Two-factor verification</h2>
-              <p className="text-gray-400 text-sm mb-6">
-                Enter the 6-digit code from your authenticator app to finish signing in.
-              </p>
-              {error && (
-                <div className="bg-red-900/40 border border-red-500 text-red-300 rounded-lg px-4 py-3 mb-6 text-sm">
-                  {error}
-                </div>
-              )}
-              <form onSubmit={handleMfaSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Authentication code</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    value={mfaCode}
-                    onChange={(e) => { setMfaCode(e.target.value.replace(/\D/g, "")); setError(""); }}
-                    required
-                    autoFocus
-                    placeholder="123456"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white tracking-[0.5em] text-center text-lg placeholder-gray-600 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-                <button type="submit" disabled={loading || mfaCode.length !== 6}
-                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white font-semibold py-3 rounded-lg transition-colors">
-                  {loading ? "Verifying..." : "Verify"}
-                </button>
-              </form>
-              <p className="text-center text-gray-500 text-sm mt-6">
-                Lost your device?{" "}
-                <a href="/settings/security" className="text-red-400 hover:text-red-300">Use a recovery code</a>
-              </p>
-            </>
-          ) : !showForgot ? (
+          {!showForgot ? (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">Log in to your account</h2>
               {error && (

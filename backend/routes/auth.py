@@ -17,6 +17,8 @@ from middleware.auth_middleware import (
     get_owner_tenant_id,
     get_security_context,
     role_requires_mfa,
+    user_has_verified_factor,
+    mfa_gate_decision,
     INCOMPLETE_SETUP_DETAIL,
 )
 from services.audit import log_audit
@@ -301,10 +303,15 @@ def mfa_status(ctx: dict = Depends(get_security_context)):
     else:
         membership = get_user_tenant_membership(ctx["user_id"])
         role = membership.get("role") if membership else None
+    has_factor = user_has_verified_factor(ctx["user_id"])  # None if lookup failed
+    # Authoritative post-login routing decision (frontend maps this to a route).
+    gate = mfa_gate_decision(ctx["is_platform_admin"], role, has_factor, ctx.get("aal"))
     return {
         "aal": ctx.get("aal"),
         "is_aal2": ctx.get("aal") == "aal2",
         "mfa_required": role_requires_mfa(ctx["is_platform_admin"], role),
+        "has_verified_factor": bool(has_factor),  # False when unknown; see `gate`
+        "gate": gate,  # "enroll" | "challenge" | "allow"
         "is_platform_admin": ctx["is_platform_admin"],
         "role": role,
     }

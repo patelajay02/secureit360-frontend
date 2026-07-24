@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { requireAuth } from "../../../../lib/auth";
+import { requireAuth, setToken, setRefreshToken, clearMfaGate, getMfaReturnTo } from "../../../../lib/auth";
 import {
   isMfaConfigured,
   hydrateSession,
@@ -52,8 +52,12 @@ export default function MfaEnrollPage() {
     setError("");
     setLoading(true);
     try {
-      await verifyCode(factorId, code);
-      // Factor verified — the session is now aal2. Generate recovery codes.
+      const tokens = await verifyCode(factorId, code);
+      // Factor verified — the session is now AAL2. Persist the upgraded tokens and
+      // clear the mandatory-enrollment gate so protected pages open again.
+      if (tokens.access_token) setToken(tokens.access_token);
+      if (tokens.refresh_token) setRefreshToken(tokens.refresh_token);
+      clearMfaGate();
       let codes = [];
       try { codes = await generateRecoveryCodes(); } catch { codes = []; }
       setRecoveryCodes(codes);
@@ -200,7 +204,7 @@ export default function MfaEnrollPage() {
               <span className="text-gray-300 text-sm">I have saved my recovery codes in a safe place.</span>
             </label>
             <button
-              onClick={() => router.push("/settings/security")}
+              onClick={() => router.push(getMfaReturnTo() || "/settings/security")}
               disabled={recoveryCodes.length > 0 && !saved}
               className="w-full mt-5 bg-red-600 hover:bg-red-700 disabled:bg-red-900 disabled:opacity-60 text-white font-semibold py-3 rounded-lg transition-colors"
             >

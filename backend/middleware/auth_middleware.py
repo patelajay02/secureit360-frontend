@@ -129,6 +129,18 @@ async def require_platform_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Platform administrator access required",
         )
+    # Mandatory enrollment: a platform admin with NO verified factor cannot reach
+    # privileged surfaces (this is what /admin's API calls hit). Independent of
+    # AAL2 enforcement so it works while AAL2_ENFORCEMENT stays OFF. Fails OPEN
+    # when the factor lookup is inconclusive (None) — never a lockout on a blip.
+    if mfa_enrollment_guard_enabled() and user_has_verified_factor(user_id) is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "mfa_enrollment_required",
+                "message": "Set up two-factor authentication to continue.",
+            },
+        )
     # Step-up: platform-admin actions require an MFA-verified (AAL2) session when
     # enforcement is enabled (operator-controlled; OFF by default -> no lockout).
     if aal2_enforcement_enabled() and get_token_aal(token) != "aal2":
@@ -242,6 +254,49 @@ def role_requires_mfa(is_platform_admin: bool, role: Optional[str]) -> bool:
     (`security_manager`/`company_admin` intentionally absent — not in the schema.)
     """
     return bool(is_platform_admin or role == "owner")
+
+
+# ── Mandatory-enrollment guard ───────────────────────────────────────────────
+# A privileged user (platform admin / owner) who has never enrolled a TOTP factor
+# must enroll BEFORE reaching privileged surfaces. This is distinct from the AAL2
+# step-up (a per-session challenge, gated by AAL2_ENFORCEMENT). Enrollment is a
+# one-time prerequisite and is enforced independently so it can ship while AAL2
+# enforcement stays OFF.
+
+def mfa_enrollment_guard_enabled() -> bool:
+    """Whether the backend blocks privileged access until a factor is enrolled.
+    Controlled by MFA_ENROLLMENT_REQUIRED (default ON — this is the fix). An
+    operator can set it OFF for a break-glass window without touching AAL2."""
+    return os.getenv("MFA_ENROLLMENT_REQUIRED", "on").strip().lower() in ("on", "true", "1", "yes")
+
+
+def user_has_verified_factor(user_id: str) -> Optional[bool]:
+    """True/False whether the user has a VERIFIED MFA factor, or None if the
+    lookup failed. None is treated as 'unknown' by callers, which FAIL OPEN so a
+    Supabase blip can never lock a privileged user out (no-lockout principle)."""
+    try:
+        resp = supabase_admin.auth.admin.mfa.list_factors({"user_id": user_id})
+        factors = getattr(resp, "factors", None) or []
+        return any(getattr(f, "status", None) == "verified" for f in factors)
+    except Exception as e:
+        print(f"[mfa] list_factors lookup failed: {type(e).__name__}")
+        return None
+
+
+def mfa_gate_decision(is_platform_admin: bool, role: Optional[str],
+                      has_verified_factor: Optional[bool], aal: Optional[str]) -> str:
+    """Single source of truth for the post-login MFA gate. Returns:
+      'enroll'    — role requires MFA and no verified factor exists
+      'challenge' — a verified factor exists but the session is not yet AAL2
+      'allow'     — proceed to the requested destination
+    Fails OPEN to 'allow' when factor status is unknown (lookup error)."""
+    if has_verified_factor is None:
+        return "allow"  # never lock out on an inconclusive lookup
+    if role_requires_mfa(is_platform_admin, role) and not has_verified_factor:
+        return "enroll"
+    if has_verified_factor and aal != "aal2":
+        return "challenge"
+    return "allow"
 
 
 def aal2_enforcement_enabled() -> bool:

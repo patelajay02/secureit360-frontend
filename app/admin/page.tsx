@@ -43,7 +43,19 @@ export default function AdminPage() {
       if (s) params.set('search', s)
       if (st && st !== 'all') params.set('status', st)
       const res = await authFetch(`/auth/admin/users?${params.toString()}`)
-      if (res.status === 403) { setAuthState('denied'); return }
+      if (res.status === 403) {
+        // A privileged admin who has not enrolled MFA is blocked by the backend
+        // enrollment guard — send them to set it up rather than showing "denied".
+        const body = await res.json().catch(() => null)
+        const code = body?.detail?.code
+        if (code === 'mfa_enrollment_required') {
+          localStorage.setItem('mfa_gate', 'enroll')
+          localStorage.setItem('mfa_return_to', '/admin')
+          window.location.href = '/settings/security/mfa'
+          return
+        }
+        setAuthState('denied'); return
+      }
       if (!res.ok) {
         setAuthState('authorized')
         showMessage('Failed to load clients.', 'error')
