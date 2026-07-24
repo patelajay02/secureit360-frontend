@@ -4,20 +4,25 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { requireAuth, setToken, setRefreshToken, clearMfaGate, getMfaReturnTo } from "../../../../lib/auth";
 import {
-  isMfaConfigured,
+  mfaClientStatus,
   hydrateSession,
-  startEnrollment,
+  beginEnrollment,
   verifyCode,
+  getAAL,
   generateRecoveryCodes,
 } from "../../../../lib/mfa";
 
+// Explicit enrollment state machine (see error taxonomy in lib/mfaEnroll.js).
+//   loading | configuration_error | authentication_error | connectivity_error
+//   already_enrolled | scan (enrollment_ready) | verify | recovery
+// "verification_error" is surfaced inline on the verify step via `error`.
 export default function MfaEnrollPage() {
   const router = useRouter();
-  const [step, setStep] = useState("loading"); // loading | unavailable | scan | verify | recovery | done
+  const [step, setStep] = useState("loading");
   const [factorId, setFactorId] = useState(null);
   const [qrCode, setQrCode] = useState("");
   const [secret, setSecret] = useState("");
@@ -26,24 +31,62 @@ export default function MfaEnrollPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Guards against a single mount enrolling twice (rapid re-renders / StrictMode
+  // within one mount). Cross-mount duplicates are additionally prevented by the
+  // list-first cleanup in beginEnrollment().
+  const startedRef = useRef(false);
+
+  async function init() {
+    setError("");
+    setStep("loading");
+
+    // 1) Configuration — the ONLY genuine "MFA unavailable" case.
+    const clientStatus = mfaClientStatus();
+    if (clientStatus === "no-env") { setStep("configuration_error"); return; }
+    if (clientStatus !== "ok") { return; } // "ssr" — effect re-runs client-side
+
+    // 2) Session hydration (backend JWT -> Supabase session).
+    let hydrated = false;
+    try { hydrated = await hydrateSession(); } catch { hydrated = false; }
+    if (!hydrated) { setStep("authentication_error"); return; }
+
+    // 3) Idempotent enrollment: list first, never enroll while a factor exists.
+    try {
+      const res = await beginEnrollment();
+      if (res.status === "already_enrolled") {
+        // Verified factor exists. If a step-up is pending, go challenge; else it
+        // is simply already enabled.
+        const { currentLevel, nextLevel } = await getAAL();
+        if (nextLevel === "aal2" && currentLevel !== "aal2") {
+          router.replace("/mfa-challenge");
+          return;
+        }
+        setStep("already_enrolled");
+        return;
+      }
+      setFactorId(res.factorId);
+      setQrCode(res.qrCode);
+      setSecret(res.secret);
+      setStep("scan");
+    } catch (e) {
+      // Map typed MfaError codes to distinct states — never collapse to "unavailable".
+      if (e?.code === "configuration_error") setStep("configuration_error");
+      else if (e?.code === "authentication_error") setStep("authentication_error");
+      else setStep("connectivity_error"); // retryable
+      setError(e?.message || "");
+    }
+  }
+
+  function retry() {
+    startedRef.current = true;
+    init();
+  }
 
   useEffect(() => {
     if (!requireAuth(router)) return;
-    (async () => {
-      if (!isMfaConfigured()) { setStep("unavailable"); return; }
-      const ok = await hydrateSession();
-      if (!ok) { setStep("unavailable"); return; }
-      try {
-        const enrollment = await startEnrollment("Authenticator app");
-        setFactorId(enrollment.factorId);
-        setQrCode(enrollment.qrCode);
-        setSecret(enrollment.secret);
-        setStep("scan");
-      } catch (e) {
-        setError(e.message || "Could not start enrollment.");
-        setStep("unavailable");
-      }
-    })();
+    if (startedRef.current) return;
+    startedRef.current = true;
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -63,7 +106,7 @@ export default function MfaEnrollPage() {
       setRecoveryCodes(codes);
       setStep("recovery");
     } catch (e) {
-      setError(e.message || "That code was not correct. Please try again.");
+      setError(e?.message || "That code was not correct. Please try again.");
       setCode("");
     } finally {
       setLoading(false);
@@ -92,18 +135,64 @@ export default function MfaEnrollPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-6 py-8">
-        {error && (
+        {/* Inline error banner only on interactive steps; dedicated error states
+            render their own copy (never collapsing to a single message). */}
+        {error && (step === "scan" || step === "verify") && (
           <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-6 text-sm">{error}</div>
         )}
 
         {step === "loading" && <div className="text-gray-500 text-sm">Preparing enrollment...</div>}
 
-        {step === "unavailable" && (
+        {/* configuration_error — the ONLY genuine "unavailable" state */}
+        {step === "configuration_error" && (
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
             <h2 className="text-lg font-semibold mb-2">Two-factor authentication is unavailable</h2>
             <p className="text-gray-400 text-sm">
-              MFA is not configured for this environment yet. Please try again later or contact your administrator.
+              MFA is not configured for this environment yet. Please contact your administrator.
             </p>
+          </div>
+        )}
+
+        {/* authentication_error — session expired / not hydrated */}
+        {step === "authentication_error" && (
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+            <h2 className="text-lg font-semibold mb-2">Please sign in again</h2>
+            <p className="text-gray-400 text-sm mb-5">
+              Your secure session has expired. Sign in again to set up two-factor authentication.
+            </p>
+            <a href="/login" className="inline-block bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+              Return to login
+            </a>
+          </div>
+        )}
+
+        {/* connectivity_error — transient; offer retry */}
+        {step === "connectivity_error" && (
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+            <h2 className="text-lg font-semibold mb-2">We couldn't reach the authenticator service</h2>
+            <p className="text-gray-400 text-sm mb-5">
+              {error || "This is usually temporary. Please try again."}
+            </p>
+            <button onClick={retry}
+              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* already_enrolled — a verified factor already exists */}
+        {step === "already_enrolled" && (
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-green-400 text-lg">✓</span>
+              <h2 className="text-lg font-semibold">Two-factor authentication is already enabled</h2>
+            </div>
+            <p className="text-gray-400 text-sm mb-5">
+              Your account already has a verified authenticator. You can manage it from the Security page.
+            </p>
+            <a href="/settings/security" className="inline-block bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+              Go to Security
+            </a>
           </div>
         )}
 
